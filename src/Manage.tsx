@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AppData, Question, Subject, Topic, Difficulty, GameSettings, CrosswordConfig, CrosswordEntry, DEFAULT_GAME_SETTINGS } from './types';
 import { saveData } from './store';
 import { parseDocx } from './docxParser';
+import { parsePdf } from './pdfParser';
 import ClassroomManage from './ClassroomManage';
 import { GoogleGenAI } from '@google/genai';
 import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School, Settings } from 'lucide-react';
@@ -174,6 +175,32 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
       if (confirm(`Tìm thấy ${parsed.length} câu hỏi. Bạn có muốn thêm vào kho?`)) {
         const newQs = parsed.map((p, i) => ({
           id: `q_import_${Date.now()}_${i}`,
+          subjectId: subjects[0]?.id || '',
+          topicId: subjects[0]?.topics[0]?.id || '',
+          text: p.text,
+          options: p.options,
+          answer: p.answer,
+          difficulty: p.difficulty as Difficulty,
+          image: p.image || null,
+          createdAt: Date.now()
+        }));
+        setQuestions(prev => [...newQs, ...prev]);
+        alert('Đã nhập thành công!');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleImportPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parsePdf(file);
+      if (parsed.length === 0) return alert('Không tìm thấy câu hỏi nào hợp lệ trong file PDF.');
+      if (confirm(`Tìm thấy ${parsed.length} câu hỏi từ PDF. Bạn có muốn thêm vào kho?`)) {
+        const newQs = parsed.map((p, i) => ({
+          id: `q_pdf_${Date.now()}_${i}`,
           subjectId: subjects[0]?.id || '',
           topicId: subjects[0]?.topics[0]?.id || '',
           text: p.text,
@@ -475,12 +502,18 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
       {tab === 'import' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
-            <h2 className="font-bold text-xl mb-4 text-blue-600">Nhập từ Word (.docx)</h2>
+            <h2 className="font-bold text-xl mb-4 text-blue-600">Nhập từ Word / PDF</h2>
             <p className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-3 rounded-lg">Định dạng mẫu:<br/>Câu 1: [Nội dung]<br/>A. [Lựa chọn]<br/>...<br/>Đáp án: A<br/>Độ khó: Dễ<br/>---</p>
-            <label className="cursor-pointer inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold hover:bg-blue-200 w-full justify-center">
-              <Upload size={20}/> Chọn file .docx
-              <input type="file" accept=".docx" className="hidden" onChange={handleImportWord} />
-            </label>
+            <div className="space-y-3">
+              <label className="cursor-pointer inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-6 py-3 rounded-xl font-bold hover:bg-blue-200 w-full justify-center">
+                <Upload size={20}/> Chọn file .docx
+                <input type="file" accept=".docx" className="hidden" onChange={handleImportWord} />
+              </label>
+              <label className="cursor-pointer inline-flex items-center gap-2 bg-red-100 text-red-700 px-6 py-3 rounded-xl font-bold hover:bg-red-200 w-full justify-center">
+                <Upload size={20}/> Chọn file .pdf
+                <input type="file" accept=".pdf" className="hidden" onChange={handleImportPdf} />
+              </label>
+            </div>
           </div>
           
           <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
