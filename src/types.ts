@@ -26,6 +26,7 @@ export type Classroom = {
 export type CrosswordEntry = {
   answer: string; // max 9 ký tự
   hint?: string;
+  secretIndex?: number; // vị trí chữ cái bí mật (0-based)
 };
 export type CrosswordConfig = {
   entries: CrosswordEntry[];

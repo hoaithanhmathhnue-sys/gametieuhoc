@@ -24,7 +24,7 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
     // If teacher has pre-configured entries, use those
     const hasConfig = crosswordConfig && crosswordConfig.entries && crosswordConfig.entries.length > 0 && crosswordConfig.entries.some(e => e.answer.length > 0);
     
-    let words: { hint: string; word: string; solved: boolean; revealedChars: number[] }[];
+    let words: { hint: string; word: string; solved: boolean; revealedChars: number[]; secretIndex: number }[];
     
     if (hasConfig) {
       const numQ = crosswordConfig!.questionCount || crosswordConfig!.entries.length;
@@ -33,17 +33,19 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
         hint: entry.hint || (questions[i]?.text || `Hàng ${i + 1}`),
         word: entry.answer.replace(/\s/g, '').toUpperCase().slice(0, 9),
         solved: false,
-        revealedChars: [] as number[]
+        revealedChars: [] as number[],
+        secretIndex: entry.secretIndex ?? Math.floor(entry.answer.replace(/\s/g, '').length / 2)
       }));
     } else {
       const selectedQs = questions.slice(0, crosswordConfig?.questionCount || 8);
       words = selectedQs.map(q => {
-        const word = q.options[q.answer].replace(/\s/g, '').toUpperCase().slice(0, 9); // Max 9 chars
+        const word = q.options[q.answer].replace(/\s/g, '').toUpperCase().slice(0, 9);
         return {
           hint: q.text,
           word: word,
           solved: false,
-          revealedChars: [] as number[]
+          revealedChars: [] as number[],
+          secretIndex: Math.floor(word.length / 2)
         };
       });
     }
@@ -52,9 +54,8 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
     words.forEach(w => { if (w.word.length > maxLen) maxLen = w.word.length; });
     
     const alignedWords = words.map(w => {
-      const midIdx = Math.floor(w.word.length / 2);
-      const offset = maxLen - midIdx;
-      return { ...w, offset, midIdx };
+      const offset = maxLen - w.secretIndex;
+      return { ...w, offset };
     });
     
     return alignedWords;
@@ -148,10 +149,21 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
   const solvedCount = grid.filter(w => w.solved).length;
 
   if (isGameOver) {
+    const secretWord = crosswordConfig?.secretWord || '';
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>
         <div className="text-6xl mb-4" style={{ animation: 'wiggle 1s ease-in-out infinite' }}>🏆</div>
-        <h2 className="text-4xl font-bold text-white mb-8 drop-shadow-lg">GIẢI MÃ THÀNH CÔNG!</h2>
+        <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">GIẢI MÃ THÀNH CÔNG!</h2>
+        {secretWord && (
+          <div className="mb-8 animate-in fade-in zoom-in duration-1000">
+            <p className="text-white/80 text-lg mb-2">🔑 Chữ bí mật:</p>
+            <div className="bg-white/20 backdrop-blur-md px-8 py-4 rounded-2xl border-2 border-yellow-400/50 shadow-2xl">
+              <span className="text-5xl md:text-6xl font-black text-yellow-300 tracking-wider drop-shadow-lg" style={{ textShadow: '0 0 30px rgba(250,204,21,0.5)' }}>
+                {secretWord}
+              </span>
+            </div>
+          </div>
+        )}
         <div className="flex gap-12">
           <div className={`p-8 rounded-3xl backdrop-blur-md transition-all ${score[0] > score[1] ? 'bg-yellow-400/90 text-yellow-900 scale-110 shadow-2xl ring-4 ring-yellow-300' : 'bg-white/20 text-white'}`}>
             <h3 className="text-2xl font-bold mb-2">🏆 Đội 1</h3>
@@ -254,13 +266,14 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
                   
                   <div className="flex relative" style={{ marginLeft: `${w.offset * 2.5}rem` }}>
                     {w.word.split('').map((char, j) => {
-                      const isMiddle = j === w.midIdx;
+                      const isSecret = j === w.secretIndex;
                       const isRevealed = w.solved || w.revealedChars.includes(j);
                       
                       return (
                         <div key={j} className={`w-10 h-10 md:w-12 md:h-12 border-2 flex items-center justify-center font-bold text-xl md:text-2xl rounded-lg transition-all duration-500 mx-[1px] md:mx-[2px]
-                          ${isMiddle && !w.solved ? `border-yellow-400 bg-yellow-50 shadow-[inset_0_0_10px_rgba(250,204,21,0.3)] ring-2 ring-yellow-300` : !w.solved ? `${color.border} ${color.light}` : ''}
-                          ${w.solved ? `bg-gradient-to-br ${color.bg} text-white border-transparent shadow-md` : ''}
+                          ${isSecret && !w.solved ? `border-yellow-400 bg-yellow-100 shadow-[inset_0_0_10px_rgba(250,204,21,0.4)] ring-2 ring-yellow-300` : !w.solved ? `${color.border} ${color.light}` : ''}
+                          ${w.solved && isSecret ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-lg' : ''}
+                          ${w.solved && !isSecret ? `bg-gradient-to-br ${color.bg} text-white border-transparent shadow-md` : ''}
                           ${activeW === i && !w.solved ? 'shadow-[0_0_12px_rgba(99,102,241,0.4)] scale-105' : ''}
                         `}>
                           <span className={`transition-all duration-300 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>

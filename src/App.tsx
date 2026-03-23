@@ -219,7 +219,10 @@ export default function App() {
           <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center text-white shadow-lg text-xl">
             🎮
           </div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-teal-700 tracking-tight">Học Mà Chơi</h1>
+          <div>
+            <h1 className="text-xl md:text-2xl font-extrabold text-teal-700 tracking-tight leading-tight">Học Mà Chơi</h1>
+            <p className="text-[10px] md:text-xs text-gray-500 leading-tight">Phát triển bởi thầy Trần Hoài Thanh - Zalo: 0348296773</p>
+          </div>
         </div>
 
         <nav className="hidden md:flex items-center gap-6">
@@ -274,17 +277,39 @@ export default function App() {
 
   // ===== FOOTER COMPONENT =====
   const Footer = () => (
-    <footer className="w-full py-8 mt-12 bg-white/60 backdrop-blur-md border-t border-teal-100">
-      <div className="flex flex-col md:flex-row justify-between items-center px-6 md:px-10 max-w-7xl mx-auto gap-6">
-        <div className="flex flex-col items-center md:items-start">
-          <div className="text-lg font-bold text-teal-700 mb-1">🎮 Học Mà Chơi</div>
-          <p className="text-sm text-gray-500">© 2024 Góc Game Lớp Học - Sân Chơi Trí Tuệ</p>
-          <p className="text-sm text-gray-500 mt-1 font-semibold">✨ Game phát triển bởi cô Vũ Phương Thanh ✨</p>
+    <footer className="w-full py-8 mt-12 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t-4 border-teal-500">
+      <div className="max-w-5xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <a href="https://giaovienai.vercel.app/" target="_blank" rel="noopener noreferrer" 
+            className="group flex items-center gap-4 bg-white/10 hover:bg-teal-600/30 p-4 rounded-2xl transition-all hover:scale-[1.02] border border-white/10 hover:border-teal-400/50">
+            <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-400 rounded-xl flex items-center justify-center text-2xl shadow-lg flex-shrink-0">🤖</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm truncate">Tool AI dành cho giáo viên</p>
+              <p className="text-teal-300 text-xs">Web tổng hợp công cụ AI</p>
+            </div>
+            <span className="px-3 py-1.5 bg-teal-500 text-white text-xs font-bold rounded-lg group-hover:bg-teal-400 transition-colors whitespace-nowrap">Truy cập →</span>
+          </a>
+          <a href="https://zalo.me/g/urhxrf976" target="_blank" rel="noopener noreferrer" 
+            className="group flex items-center gap-4 bg-white/10 hover:bg-blue-600/30 p-4 rounded-2xl transition-all hover:scale-[1.02] border border-white/10 hover:border-blue-400/50">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center text-2xl shadow-lg flex-shrink-0">👥</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm truncate">Cộng đồng GV ứng dụng AI</p>
+              <p className="text-blue-300 text-xs">GROUP 3 - Zalo</p>
+            </div>
+            <span className="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg group-hover:bg-blue-400 transition-colors whitespace-nowrap">Tham gia →</span>
+          </a>
+          <a href="https://forms.gle/oucuSuzbkad5sSTQ9" target="_blank" rel="noopener noreferrer" 
+            className="group flex items-center gap-4 bg-white/10 hover:bg-amber-600/30 p-4 rounded-2xl transition-all hover:scale-[1.02] border border-white/10 hover:border-amber-400/50">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center text-2xl shadow-lg flex-shrink-0">📚</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm truncate">Khóa học tạo App giáo dục</p>
+              <p className="text-amber-300 text-xs">Đăng ký ngay hôm nay</p>
+            </div>
+            <span className="px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg group-hover:bg-amber-400 transition-colors whitespace-nowrap">Đăng ký →</span>
+          </a>
         </div>
-        <div className="flex gap-6">
-          <a className="text-sm text-gray-400 hover:text-teal-600 transition-colors" href="#">Thông tin</a>
-          <a className="text-sm text-gray-400 hover:text-teal-600 transition-colors" href="#">Liên hệ</a>
-          <a className="text-sm text-gray-400 hover:text-teal-600 transition-colors" href="#">Hỗ trợ</a>
+        <div className="text-center pt-4 border-t border-white/10">
+          <p className="text-gray-400 text-xs">© 2024 Góc Game Lớp Học — Phát triển bởi thầy Trần Hoài Thanh</p>
         </div>
       </div>
     </footer>
@@ -298,61 +323,119 @@ export default function App() {
           <Header />
 
           {screen === 'home' && (
-            <div className="min-h-screen animated-bg relative overflow-hidden">
+            <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 20%, #e8eaf6 40%, #f3e5f5 60%, #fff3e0 80%, #e0f7fa 100%)' }}>
               {/* Floating Particles */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {[...Array(15)].map((_, i) => (
+                {[...Array(20)].map((_, i) => (
                   <div
                     key={i}
                     className="floating-particle"
                     style={{
                       left: `${Math.random() * 100}%`,
-                      width: `${8 + Math.random() * 20}px`,
-                      height: `${8 + Math.random() * 20}px`,
-                      background: ['#80cbc4', '#4db6ac', '#b2dfdb', '#e0f2f1', '#a7ffeb', '#00bfa5'][i % 6],
-                      animationDuration: `${6 + Math.random() * 10}s`,
-                      animationDelay: `${Math.random() * 5}s`,
+                      width: `${10 + Math.random() * 25}px`,
+                      height: `${10 + Math.random() * 25}px`,
+                      background: ['#80cbc4', '#7986cb', '#f48fb1', '#ffb74d', '#81d4fa', '#a5d6a7', '#ce93d8', '#fff176'][i % 8],
+                      animationDuration: `${5 + Math.random() * 8}s`,
+                      animationDelay: `${Math.random() * 4}s`,
+                      borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '30% 70% 53% 47% / 26% 46% 54% 74%' : '20%',
                     }}
                   />
                 ))}
+                {/* Decorative shapes */}
+                <div className="absolute top-32 left-10 w-40 h-40 bg-indigo-200/30 rounded-full blur-3xl" />
+                <div className="absolute top-60 right-20 w-60 h-60 bg-pink-200/30 rounded-full blur-3xl" />
+                <div className="absolute bottom-40 left-1/3 w-48 h-48 bg-amber-200/30 rounded-full blur-3xl" />
               </div>
 
               <div className="max-w-7xl mx-auto p-6 pt-32 md:pt-28 relative z-10">
                 {/* Hero Section */}
-                <section className="mb-12 text-center" style={{ animation: 'slide-up 0.6s ease-out' }}>
-                  <h2 className="text-4xl md:text-6xl font-black text-gray-800 mb-4 tracking-tight drop-shadow-sm">
-                    GÓC GAME LỚP HỌC
+                <section className="mb-14 text-center" style={{ animation: 'slide-up 0.6s ease-out' }}>
+                  {/* Decorative icons */}
+                  <div className="flex justify-center gap-3 mb-4">
+                    {['📚', '🎯', '🧠', '⭐', '🏆', '🎨'].map((emoji, i) => (
+                      <span key={i} className="text-2xl md:text-3xl animate-bounce" style={{ animationDelay: `${i * 0.15}s`, animationDuration: '2s' }}>{emoji}</span>
+                    ))}
+                  </div>
+                  <h2 className="text-5xl md:text-7xl font-black mb-5 tracking-tight leading-none">
+                    <span className="inline-block" style={{
+                      background: 'linear-gradient(135deg, #00897b 0%, #6366f1 25%, #ec4899 50%, #f59e0b 75%, #10b981 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      filter: 'drop-shadow(3px 3px 0px rgba(0,0,0,0.15))',
+                      textShadow: 'none',
+                    }}>
+                      GÓC GAME
+                    </span>
+                    <br />
+                    <span className="inline-block mt-1" style={{
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 25%, #8b5cf6 50%, #06b6d4 75%, #22c55e 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      filter: 'drop-shadow(3px 3px 0px rgba(0,0,0,0.15))',
+                    }}>
+                      LỚP HỌC
+                    </span>
                   </h2>
-                  <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-                    Khám phá thế giới kiến thức qua những trò chơi vui nhộn và đầy thử thách cùng bạn bè nhé! 🌟
+                  <p className="text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
+                    <span className="text-teal-600">Khám phá </span>
+                    <span className="text-indigo-600">thế giới kiến thức </span>
+                    <span className="text-pink-600">qua những trò chơi </span>
+                    <span className="text-amber-600">vui nhộn </span>
+                    <span className="text-purple-600">và đầy thử thách </span>
+                    <span className="text-emerald-600">cùng bạn bè nhé! </span>
+                    <span className="text-2xl">🌟</span>
                   </p>
                 </section>
 
-                {/* Games Grid (Bento Style) */}
+                {/* Games Grid (3D Bento Style) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {games.map((g, idx) => (
-                    <div
-                      key={g.id}
-                      className="group relative bg-white/90 backdrop-blur-sm rounded-2xl p-7 shadow-[0_8px_30px_rgba(0,128,128,0.08)] hover:shadow-[0_20px_40px_rgba(0,128,128,0.15)] hover:scale-[1.02] transition-all duration-300 cursor-pointer flex flex-col items-start overflow-visible border border-teal-100/50"
-                      style={{ animation: `pop-in 0.5s ease-out ${idx * 0.1}s both` }}
-                      onClick={() => setSelectedGame(g.id)}
-                    >
-                      {/* Floating Icon Badge */}
-                      <div className={`icon-badge absolute -top-5 right-6 w-14 h-14 ${g.iconBg} rounded-2xl flex items-center justify-center shadow-lg text-3xl`}>
-                        {g.icon}
+                  {games.map((g, idx) => {
+                    const cardGradients = [
+                      'from-amber-50 to-orange-50 border-amber-200/60 hover:border-amber-400',
+                      'from-teal-50 to-cyan-50 border-teal-200/60 hover:border-teal-400',
+                      'from-emerald-50 to-green-50 border-emerald-200/60 hover:border-emerald-400',
+                      'from-rose-50 to-pink-50 border-rose-200/60 hover:border-rose-400',
+                      'from-pink-50 to-fuchsia-50 border-pink-200/60 hover:border-pink-400',
+                      'from-indigo-50 to-violet-50 border-indigo-200/60 hover:border-indigo-400',
+                    ];
+                    const btnColors = [
+                      'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600',
+                      'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600',
+                      'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600',
+                      'bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600',
+                      'bg-gradient-to-r from-pink-500 to-fuchsia-500 hover:from-pink-600 hover:to-fuchsia-600',
+                      'bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600',
+                    ];
+                    const tagLabels = ['🔥 Hot', '⚡ Hấp dẫn', '🎯 Trí nhớ', '🔔 Kịch tính', '🌈 Vui nhộn', '🧩 Khám phá'];
+                    return (
+                      <div
+                        key={g.id}
+                        className={`group relative bg-gradient-to-br ${cardGradients[idx]} backdrop-blur-sm rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-[1.03] hover:-translate-y-2 transition-all duration-400 cursor-pointer flex flex-col items-start overflow-visible border-2`}
+                        style={{ animation: `pop-in 0.5s ease-out ${idx * 0.1}s both` }}
+                        onClick={() => setSelectedGame(g.id)}
+                      >
+                        {/* 3D Icon Badge */}
+                        <div className={`absolute -top-6 right-6 w-16 h-16 ${g.iconBg} rounded-2xl flex items-center justify-center text-3xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] border-2 border-white/80 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}
+                          style={{ boxShadow: '0 8px 25px rgba(0,0,0,0.15), inset 0 -3px 0 rgba(0,0,0,0.1)' }}>
+                          {g.icon}
+                        </div>
+
+                        {/* Tag */}
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/80 text-gray-500 mb-2 shadow-sm">{tagLabels[idx]}</span>
+
+                        {/* Title */}
+                        <h3 className="text-xl font-extrabold mb-2 text-gray-800 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-teal-600 group-hover:to-indigo-600 transition-all">{g.name}</h3>
+                        <p className="text-gray-500 mb-6 text-sm line-clamp-2 leading-relaxed">{g.desc}</p>
+
+                        {/* Play Button */}
+                        <button className={`${btnColors[idx]} mt-auto w-full py-3.5 text-white font-bold rounded-xl flex justify-center items-center gap-2 shadow-lg hover:shadow-xl active:scale-95 transition-all`}
+                          style={{ boxShadow: '0 4px 15px rgba(0,0,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.15)' }}>
+                          <Play size={18} />
+                          Chơi ngay
+                        </button>
                       </div>
-
-                      {/* Title */}
-                      <h3 className="text-xl font-bold mb-2 mt-3 text-gray-800 group-hover:text-teal-700 transition-colors">{g.name}</h3>
-                      <p className="text-gray-500 mb-6 text-sm line-clamp-2">{g.desc}</p>
-
-                      {/* Play Button */}
-                      <button className="teal-btn mt-auto w-full py-3.5 text-white font-bold rounded-xl flex justify-center items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all">
-                        <Play size={18} />
-                        Chơi ngay
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

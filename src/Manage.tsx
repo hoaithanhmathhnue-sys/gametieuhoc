@@ -576,49 +576,80 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-[500px] overflow-y-auto">
                   {(gameSettings.crossword.config?.entries || []).map((entry, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl">
-                      <span className="text-sm font-bold text-gray-400 w-6 text-center">{idx + 1}</span>
-                      <input 
-                        type="text" maxLength={9}
-                        placeholder="Đáp án (max 9 chữ)"
-                        className="flex-1 p-2 border rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
-                        value={entry.answer}
-                        onChange={e => {
-                          const val = e.target.value.toUpperCase().replace(/[^A-ZÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴĐ]/gi, '');
-                          setGameSettings(prev => {
-                            const entries = [...(prev.crossword.config?.entries || [])];
-                            entries[idx] = { ...entries[idx], answer: val.slice(0, 9) };
-                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
-                          });
-                        }}
-                      />
-                      <input 
-                        type="text"
-                        placeholder="Gợi ý (tùy chọn)"
-                        className="w-40 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
-                        value={entry.hint || ''}
-                        onChange={e => {
-                          setGameSettings(prev => {
-                            const entries = [...(prev.crossword.config?.entries || [])];
-                            entries[idx] = { ...entries[idx], hint: e.target.value };
-                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
-                          });
-                        }}
-                      />
-                      <button 
-                        onClick={() => {
-                          setGameSettings(prev => {
-                            const entries = [...(prev.crossword.config?.entries || [])];
-                            entries.splice(idx, 1);
-                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
-                          });
-                        }}
-                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div key={idx} className="bg-gray-50 p-3 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-400 w-6 text-center">{idx + 1}</span>
+                        <input 
+                          type="text" maxLength={9}
+                          placeholder="Đáp án (max 9 chữ)"
+                          className="flex-1 p-2 border rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                          value={entry.answer}
+                          onChange={e => {
+                            const val = e.target.value.toUpperCase().replace(/[^A-ZÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴĐ]/gi, '');
+                            setGameSettings(prev => {
+                              const entries = [...(prev.crossword.config?.entries || [])];
+                              // Reset secretIndex if answer length changes
+                              const newSecretIndex = (entries[idx].secretIndex ?? -1) >= val.slice(0, 9).length ? undefined : entries[idx].secretIndex;
+                              entries[idx] = { ...entries[idx], answer: val.slice(0, 9), secretIndex: newSecretIndex };
+                              return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                            });
+                          }}
+                        />
+                        <input 
+                          type="text"
+                          placeholder="Gợi ý"
+                          className="w-32 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                          value={entry.hint || ''}
+                          onChange={e => {
+                            setGameSettings(prev => {
+                              const entries = [...(prev.crossword.config?.entries || [])];
+                              entries[idx] = { ...entries[idx], hint: e.target.value };
+                              return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                            });
+                          }}
+                        />
+                        <button 
+                          onClick={() => {
+                            setGameSettings(prev => {
+                              const entries = [...(prev.crossword.config?.entries || [])];
+                              entries.splice(idx, 1);
+                              return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                            });
+                          }}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      {/* Click to select secret letter */}
+                      {entry.answer.length > 0 && (
+                        <div className="flex items-center gap-1 ml-8">
+                          <span className="text-xs text-gray-500 mr-1 whitespace-nowrap">Chọn chữ bí mật:</span>
+                          {entry.answer.split('').map((char, ci) => (
+                            <button 
+                              key={ci}
+                              onClick={() => {
+                                setGameSettings(prev => {
+                                  const entries = [...(prev.crossword.config?.entries || [])];
+                                  entries[idx] = { ...entries[idx], secretIndex: ci };
+                                  return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                                });
+                              }}
+                              className={`w-7 h-7 flex items-center justify-center border-2 text-xs font-bold rounded transition-all
+                                ${entry.secretIndex === ci 
+                                  ? 'bg-yellow-400 border-yellow-600 text-yellow-900 scale-110 shadow-md ring-2 ring-yellow-300' 
+                                  : 'bg-white border-gray-300 text-gray-600 hover:border-yellow-400 hover:bg-yellow-50'}`}
+                            >
+                              {char}
+                            </button>
+                          ))}
+                          {entry.secretIndex != null && (
+                            <span className="text-xs text-yellow-600 font-bold ml-1">✓ Ô {entry.secretIndex + 1}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {(gameSettings.crossword.config?.entries || []).length === 0 && (
@@ -630,14 +661,14 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
               {/* Right: Secret Word + Preview */}
               <div className="space-y-4">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-2">🔑 Chữ bí mật (dãy dọc ô vàng)</label>
+                  <label className="font-bold text-gray-700 block mb-2">🔑 Chữ bí mật (dãy dọc ô vàng) — Tiếng Việt có dấu</label>
                   <input 
                     type="text" maxLength={12}
-                    placeholder="VD: TOANHOC"
-                    className="w-full p-3 border-2 border-amber-300 rounded-xl font-mono text-2xl uppercase tracking-[0.5em] text-center text-amber-700 bg-amber-50 focus:ring-2 focus:ring-amber-400 focus:border-amber-500"
+                    placeholder="VD: TOÁN HỌC"
+                    className="w-full p-3 border-2 border-amber-300 rounded-xl font-bold text-2xl tracking-[0.3em] text-center text-amber-700 bg-amber-50 focus:ring-2 focus:ring-amber-400 focus:border-amber-500"
                     value={gameSettings.crossword.config?.secretWord || ''}
                     onChange={e => {
-                      const val = e.target.value.toUpperCase();
+                      const val = e.target.value;
                       setGameSettings(prev => ({
                         ...prev,
                         crossword: {
@@ -651,6 +682,7 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                       }));
                     }}
                   />
+                  <p className="text-xs text-amber-500 mt-1">Có thể gõ tiếng Việt có dấu. VD: "TOÁN HỌC", "THIÊN NHIÊN"</p>
                 </div>
 
                 <div>
@@ -682,13 +714,12 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                     <h4 className="font-bold text-sm text-gray-600 mb-3">Xem trước ô chữ:</h4>
                     <div className="space-y-1 font-mono text-xs">
                       {(gameSettings.crossword.config?.entries || []).map((entry, idx) => {
-                        const secretIdx = gameSettings.crossword.config?.secretWord ? 
-                          entry.answer.indexOf(gameSettings.crossword.config.secretWord[idx]?.toUpperCase()) : -1;
+                        const sIdx = entry.secretIndex;
                         return (
                           <div key={idx} className="flex gap-0.5 justify-center">
                             {entry.answer.split('').map((char, ci) => (
                               <div key={ci} className={`w-6 h-6 flex items-center justify-center border text-xs font-bold rounded
-                                ${ci === secretIdx ? 'bg-yellow-300 border-yellow-500 text-yellow-900' : 'bg-white border-gray-300 text-gray-700'}`}>
+                                ${ci === sIdx ? 'bg-yellow-400 border-yellow-600 text-yellow-900 shadow-sm' : 'bg-white border-gray-300 text-gray-700'}`}>
                                 {char}
                               </div>
                             ))}
@@ -696,6 +727,12 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                         );
                       })}
                     </div>
+                    {gameSettings.crossword.config?.secretWord && (
+                      <div className="mt-3 text-center">
+                        <span className="text-xs text-gray-500">Chữ bí mật: </span>
+                        <span className="text-lg font-black text-amber-700 tracking-wider">{gameSettings.crossword.config.secretWord}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
