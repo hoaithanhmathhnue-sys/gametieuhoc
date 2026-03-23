@@ -16,7 +16,7 @@ const TEAM_THEMES = [
   { gradient: 'from-orange-500 via-rose-500 to-pink-500', light: 'from-orange-100 to-rose-100', border: 'border-orange-400', track: 'from-orange-400 to-rose-500', glow: 'shadow-orange-500/40' },
 ];
 
-export default function Obstacle({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function Obstacle({ questions, onReplay, onGameEnd }: { questions: Question[], onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
@@ -60,6 +60,8 @@ export default function Obstacle({ questions, onReplay }: { questions: Question[
         
         if (newPos >= totalSteps) {
           setStatus('end');
+          const correctAnswered = Math.ceil(totalSteps / 2);
+          onGameEnd?.(correctAnswered * 10, correctAnswered, questions.length);
         } else {
           nextTurn();
         }

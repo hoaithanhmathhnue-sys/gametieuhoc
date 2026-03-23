@@ -16,6 +16,7 @@ const defaultData: AppData = {
   questions: [],
   classrooms: [],
   selectedQuestionIds: [],
+  leaderboard: [],
   gameSettings: { ...DEFAULT_GAME_SETTINGS },
   settings: { lastUpdated: Date.now(), version: '1.0' }
 };
@@ -41,6 +42,7 @@ const migrateData = (data: any): AppData => {
   if (!data.classrooms) data.classrooms = [];
   if (!data.selectedQuestionIds) data.selectedQuestionIds = [];
   if (!data.gameSettings) data.gameSettings = { ...DEFAULT_GAME_SETTINGS };
+  if (!data.leaderboard) data.leaderboard = [];
   return data as AppData;
 };
 

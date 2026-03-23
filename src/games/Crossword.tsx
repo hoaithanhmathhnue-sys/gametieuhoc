@@ -15,7 +15,7 @@ const ROW_COLORS = [
   { bg: 'from-fuchsia-500 to-pink-600', light: 'bg-fuchsia-50', border: 'border-fuchsia-300', text: 'text-fuchsia-700', badge: 'bg-fuchsia-500' },
 ];
 
-export default function Crossword({ questions, crosswordConfig, onReplay }: { questions: Question[], crosswordConfig?: CrosswordConfig, onReplay?: () => void }) {
+export default function Crossword({ questions, crosswordConfig, onReplay, onGameEnd }: { questions: Question[], crosswordConfig?: CrosswordConfig, onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
@@ -69,6 +69,7 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
   const [timeLeft, setTimeLeft] = useState(15);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const gameEndedRef = useRef(false);
 
   useEffect(() => {
     if (isTimerRunning && timeLeft > 0) {
@@ -149,6 +150,11 @@ export default function Crossword({ questions, crosswordConfig, onReplay }: { qu
   const solvedCount = grid.filter(w => w.solved).length;
 
   if (isGameOver) {
+    const maxScore = Math.max(score[0], score[1]);
+    if (onGameEnd && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+      onGameEnd(maxScore, solvedCount, grid.length);
+    }
     const secretWord = crosswordConfig?.secretWord || '';
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>

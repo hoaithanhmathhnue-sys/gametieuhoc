@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Question } from '../types';
 import { Bell, Users, Eye, ArrowRight, Download, Maximize, Sparkles, ChevronRight } from 'lucide-react';
 import { MathContent } from '../MathContent';
@@ -10,7 +10,7 @@ const ANSWER_COLORS = [
   { bg: 'bg-rose-50', border: 'border-rose-200', active: 'bg-rose-100 border-rose-400', badge: 'bg-gradient-to-br from-rose-500 to-red-600', text: 'text-rose-800', correct: 'from-rose-500 to-red-600' },
 ];
 
-export default function GoldenBell({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function GoldenBell({ questions, onReplay, onGameEnd }: { questions: Question[], onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
@@ -21,6 +21,7 @@ export default function GoldenBell({ questions, onReplay }: { questions: Questio
   const [step, setStep] = useState<'hidden'|'question'|'options'|'answer'>('hidden');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [gameLog, setGameLog] = useState<{q: string, remaining: number}[]>([]);
+  const gameEndedRef = useRef(false);
 
   const q = questions[current];
   const totalQ = questions.length;
@@ -91,6 +92,10 @@ export default function GoldenBell({ questions, onReplay }: { questions: Questio
   };
 
   if (current >= totalQ) {
+    if (onGameEnd && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+      onGameEnd(students * 10, students, initialStudents);
+    }
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8" style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 30%, #d97706 60%, #b45309 100%)' }}>
         <Bell size={100} className="text-white mb-8 drop-shadow-2xl animate-bounce" />

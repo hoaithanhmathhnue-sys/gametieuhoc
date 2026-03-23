@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AppData } from './types';
-import { loadData } from './store';
+import { AppData, SelectedPlayer, LeaderboardEntry } from './types';
+import { loadData, saveData } from './store';
 import Manage from './Manage';
 import GameSetup from './GameSetup';
 import Millionaire from './games/Millionaire';
@@ -17,6 +17,8 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [gameQuestions, setGameQuestions] = useState<any[]>([]);
   const [activeNav, setActiveNav] = useState('home');
+  const [currentPlayer, setCurrentPlayer] = useState<SelectedPlayer>(null);
+  const [currentGameId, setCurrentGameId] = useState<string>('');
 
   useEffect(() => {
     setData(loadData());
@@ -33,10 +35,33 @@ export default function App() {
     { id: 'crossword', name: 'Ô chữ thần kỳ', icon: '🔤', desc: 'Khám phá các hàng ngang bí mật để tìm ra từ khóa trung tâm của trò chơi.', color: 'bg-indigo-500', iconBg: 'bg-indigo-100' },
   ];
 
-  const handleStartGame = (gameId: string, questions: any[]) => {
+  const handleStartGame = (gameId: string, questions: any[], player: SelectedPlayer) => {
     setGameQuestions(questions);
+    setCurrentPlayer(player);
+    setCurrentGameId(gameId);
     setScreen(gameId);
     setSelectedGame(null);
+  };
+
+  const recordScore = (score: number, correctCount: number, totalCount: number) => {
+    if (!currentPlayer) return;
+    const gameName = games.find(g => g.id === currentGameId)?.name || currentGameId;
+    const entry: LeaderboardEntry = {
+      id: `lb_${Date.now()}`,
+      studentId: currentPlayer.studentId,
+      studentName: currentPlayer.studentName,
+      classroomId: currentPlayer.classroomId,
+      classroomName: currentPlayer.classroomName,
+      gameId: currentGameId,
+      gameName,
+      score,
+      correctCount,
+      totalCount,
+      timestamp: Date.now()
+    };
+    const newData = { ...data, leaderboard: [...data.leaderboard, entry] };
+    setData(newData);
+    saveData(newData);
   };
 
   const navigateTo = (nav: string) => {
@@ -87,22 +112,50 @@ export default function App() {
 
   // ===== LEADERBOARD PAGE =====
   const LeaderboardScreen = () => {
-    const mockPlayers = [
-      { rank: 1, name: 'Minh Anh', score: 980, badge: '👑' },
-      { rank: 2, name: 'Bảo Ngọc', score: 920, badge: '🥈' },
-      { rank: 3, name: 'Đức Huy', score: 875, badge: '🥉' },
-      { rank: 4, name: 'Thu Hà', score: 820, badge: '⭐' },
-      { rank: 5, name: 'Quốc Anh', score: 790, badge: '⭐' },
-      { rank: 6, name: 'Hồng Nhung', score: 750, badge: '⭐' },
-      { rank: 7, name: 'Văn Đại', score: 710, badge: '⭐' },
-      { rank: 8, name: 'Phương Linh', score: 680, badge: '⭐' },
-    ];
+    const [filterGame, setFilterGame] = useState<string>('');
+    const [filterClass, setFilterClass] = useState<string>('');
+
+    // Aggregate scores by student: sum all their scores
+    const entries = data.leaderboard
+      .filter(e => !filterGame || e.gameId === filterGame)
+      .filter(e => !filterClass || e.classroomId === filterClass);
+
+    // Group by studentId, sum scores
+    const studentScores: Record<string, { name: string; classroom: string; totalScore: number; games: number; correct: number; total: number }> = {};
+    entries.forEach(e => {
+      if (!studentScores[e.studentId]) {
+        studentScores[e.studentId] = { name: e.studentName, classroom: e.classroomName, totalScore: 0, games: 0, correct: 0, total: 0 };
+      }
+      studentScores[e.studentId].totalScore += e.score;
+      studentScores[e.studentId].games += 1;
+      studentScores[e.studentId].correct += e.correctCount;
+      studentScores[e.studentId].total += e.totalCount;
+    });
+
+    const ranked = Object.entries(studentScores)
+      .sort(([,a], [,b]) => b.totalScore - a.totalScore)
+      .map(([id, info], idx) => ({
+        rank: idx + 1,
+        id,
+        ...info,
+        badge: idx === 0 ? '👑' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '⭐'
+      }));
+
+    const uniqueGames = [...new Set(data.leaderboard.map(e => e.gameId))];
+    const uniqueClasses = [...new Set(data.leaderboard.map(e => e.classroomId))];
+
+    const clearLeaderboard = () => {
+      if (!confirm('Xóa toàn bộ Bảng Vàng? Thao tác này không thể hoàn tác.')) return;
+      const newData = { ...data, leaderboard: [] };
+      setData(newData);
+      saveData(newData);
+    };
 
     return (
       <div className="min-h-screen animated-bg">
         <div className="max-w-3xl mx-auto p-6 pt-28">
           <div className="glass rounded-3xl p-8">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <Crown size={40} className="text-white" />
               </div>
@@ -110,32 +163,70 @@ export default function App() {
               <p className="text-gray-500 mt-2">Những ngôi sao sáng nhất lớp học!</p>
             </div>
 
-            {/* Top 3 */}
-            <div className="flex justify-center gap-4 mb-8">
-              {mockPlayers.slice(0, 3).map((p, i) => (
-                <div key={i} className={`text-center ${i === 0 ? 'order-2 -mt-4' : i === 1 ? 'order-1 mt-2' : 'order-3 mt-2'}`}>
-                  <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600 w-20 h-20' : i === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-orange-600'}`}>
-                    {p.badge}
+            {/* Filters */}
+            <div className="flex gap-3 mb-6 flex-wrap">
+              <select value={filterGame} onChange={e => setFilterGame(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-medium flex-1 min-w-[140px]">
+                <option value="">Tất cả game</option>
+                {uniqueGames.map(gId => {
+                  const gName = games.find(g => g.id === gId)?.name || gId;
+                  return <option key={gId} value={gId}>{gName}</option>;
+                })}
+              </select>
+              <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-medium flex-1 min-w-[140px]">
+                <option value="">Tất cả lớp</option>
+                {uniqueClasses.map(cId => {
+                  const cName = data.classrooms.find(c => c.id === cId)?.name || data.leaderboard.find(e => e.classroomId === cId)?.classroomName || cId;
+                  return <option key={cId} value={cId}>{cName}</option>;
+                })}
+              </select>
+              {data.leaderboard.length > 0 && (
+                <button onClick={clearLeaderboard} className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 border border-red-200">🗑️ Xóa</button>
+              )}
+            </div>
+
+            {ranked.length === 0 ? (
+              <div className="text-center py-12">
+                <Trophy size={48} className="mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-400 font-bold">Chưa có dữ liệu</p>
+                <p className="text-gray-400 text-sm mt-1">Chọn người chơi khi bắt đầu game để ghi điểm vào Bảng Vàng!</p>
+              </div>
+            ) : (
+              <>
+                {/* Top 3 Podium */}
+                {ranked.length >= 3 && (
+                  <div className="flex justify-center gap-4 mb-8">
+                    {ranked.slice(0, 3).map((p, i) => (
+                      <div key={p.id} className={`text-center ${i === 0 ? 'order-2 -mt-4' : i === 1 ? 'order-1 mt-2' : 'order-3 mt-2'}`}>
+                        <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600 w-20 h-20' : i === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' : 'bg-gradient-to-br from-orange-400 to-orange-600'}`}>
+                          {p.badge}
+                        </div>
+                        <p className="font-bold text-gray-800 mt-2 text-sm">{p.name}</p>
+                        <p className="text-teal-600 font-extrabold">{p.totalScore} đ</p>
+                        <p className="text-[10px] text-gray-400">{p.games} lượt • {p.correct}/{p.total} đúng</p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="font-bold text-gray-800 mt-2 text-sm">{p.name}</p>
-                  <p className="text-teal-600 font-extrabold">{p.score}</p>
-                </div>
-              ))}
-            </div>
+                )}
 
-            {/* Table */}
-            <div className="space-y-2">
-              {mockPlayers.slice(3).map((p) => (
-                <div key={p.rank} className="flex items-center gap-4 bg-white/70 rounded-xl px-5 py-3 hover:bg-white/90 transition-colors">
-                  <span className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center font-bold text-teal-700 text-sm">{p.rank}</span>
-                  <span className="text-lg">{p.badge}</span>
-                  <span className="flex-1 font-semibold text-gray-700">{p.name}</span>
-                  <span className="font-extrabold text-teal-600">{p.score} điểm</span>
+                {/* Table */}
+                <div className="space-y-2">
+                  {(ranked.length < 3 ? ranked : ranked.slice(3)).map(p => (
+                    <div key={p.id} className="flex items-center gap-4 bg-white/70 rounded-xl px-5 py-3 hover:bg-white/90 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center font-bold text-teal-700 text-sm">{p.rank}</span>
+                      <span className="text-lg">{p.badge}</span>
+                      <div className="flex-1">
+                        <span className="font-semibold text-gray-700">{p.name}</span>
+                        <span className="text-xs text-gray-400 ml-2">• {p.classroom}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-extrabold text-teal-600">{p.totalScore} điểm</span>
+                        <span className="text-xs text-gray-400 block">{p.games} lượt • {p.correct}/{p.total}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <p className="text-center text-sm text-gray-400 italic mt-6">✨ Dữ liệu minh họa - tính năng đang phát triển!</p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -441,7 +532,7 @@ export default function App() {
           gameName={games.find(g => g.id === selectedGame)?.name}
           data={data}
           onBack={() => setSelectedGame(null)}
-          onStart={(qs) => handleStartGame(selectedGame, qs)}
+          onStart={(qs, player) => handleStartGame(selectedGame, qs, player)}
         />
       )}
 
@@ -455,12 +546,12 @@ export default function App() {
             </button>
           </div>
           <div className="flex-1 relative">
-            {screen === 'millionaire' && <Millionaire questions={gameQuestions} onReplay={() => { setSelectedGame('millionaire'); setScreen('home'); }} />}
-            {screen === 'obstacle' && <Obstacle questions={gameQuestions} onReplay={() => { setSelectedGame('obstacle'); setScreen('home'); }} />}
-            {screen === 'flipcard' && <FlipCard questions={gameQuestions} onReplay={() => { setSelectedGame('flipcard'); setScreen('home'); }} />}
-            {screen === 'goldenbell' && <GoldenBell questions={gameQuestions} onReplay={() => { setSelectedGame('goldenbell'); setScreen('home'); }} />}
-            {screen === 'flower' && <Flower questions={gameQuestions} onReplay={() => { setSelectedGame('flower'); setScreen('home'); }} />}
-            {screen === 'crossword' && <Crossword questions={gameQuestions} crosswordConfig={data.gameSettings?.crossword?.config} onReplay={() => { setSelectedGame('crossword'); setScreen('home'); }} />}
+            {screen === 'millionaire' && <Millionaire questions={gameQuestions} onReplay={() => { setSelectedGame('millionaire'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+            {screen === 'obstacle' && <Obstacle questions={gameQuestions} onReplay={() => { setSelectedGame('obstacle'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+            {screen === 'flipcard' && <FlipCard questions={gameQuestions} onReplay={() => { setSelectedGame('flipcard'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+            {screen === 'goldenbell' && <GoldenBell questions={gameQuestions} onReplay={() => { setSelectedGame('goldenbell'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+            {screen === 'flower' && <Flower questions={gameQuestions} onReplay={() => { setSelectedGame('flower'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+            {screen === 'crossword' && <Crossword questions={gameQuestions} crosswordConfig={data.gameSettings?.crossword?.config} onReplay={() => { setSelectedGame('crossword'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
           </div>
         </div>
       )}

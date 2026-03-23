@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Question } from '../types';
 import { playFlip, playDing, playBuzz } from '../utils/audio';
 import { MathContent } from '../MathContent';
@@ -21,7 +21,7 @@ const CARD_COLORS = [
 
 const CARD_EMOJIS = ['⭐', '🌟', '💎', '🔮', '🌈', '🎯', '🎪', '🦋', '🌸', '🍀', '🎭', '🎨'];
 
-export default function FlipCard({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function FlipCard({ questions, onReplay, onGameEnd }: { questions: Question[], onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
@@ -32,6 +32,7 @@ export default function FlipCard({ questions, onReplay }: { questions: Question[
   const [turn, setTurn] = useState(0);
   const [combo, setCombo] = useState([0, 0]);
   const [showComboBonus, setShowComboBonus] = useState<{team: number, show: boolean}>({team: 0, show: false});
+  const gameEndedRef = useRef(false);
 
   const handleCardClick = (i: number) => {
     if (activeCard !== null || cards[i].solved || cards[i].flipped) return;
@@ -85,6 +86,12 @@ export default function FlipCard({ questions, onReplay }: { questions: Question[
   const isGameOver = cards.every(c => c.solved);
 
   if (isGameOver) {
+    const maxScore = Math.max(score[0], score[1]);
+    const totalCards = cards.length / 2;
+    if (onGameEnd && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+      onGameEnd(maxScore * 10, maxScore, totalCards);
+    }
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>
         <h1 className="text-6xl mb-4">🎉</h1>

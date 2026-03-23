@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Question } from '../types';
 import { playDing, playBuzz } from '../utils/audio';
 import { MathContent } from '../MathContent';
 
-export default function Flower({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function Flower({ questions, onReplay, onGameEnd }: { questions: Question[], onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
@@ -13,6 +13,7 @@ export default function Flower({ questions, onReplay }: { questions: Question[],
   const [activeF, setActiveF] = useState<number | null>(null);
   const [showResult, setShowResult] = useState<'correct' | 'wrong' | null>(null);
   const [score, setScore] = useState([0, 0, 0]);
+  const gameEndedRef = useRef(false);
   const [turn, setTurn] = useState(0);
 
   const colors = ['bg-pink-500', 'bg-blue-500', 'bg-orange-500'];
@@ -71,6 +72,10 @@ export default function Flower({ questions, onReplay }: { questions: Question[],
 
   if (isGameOver) {
     const maxScore = Math.max(...score);
+    if (onGameEnd && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+      onGameEnd(maxScore * 10, maxScore, flowerCount);
+    }
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8 animated-bg min-h-screen">
         <div className="glass rounded-3xl p-12 max-w-2xl w-full" style={{ animation: 'pop-in 0.5s ease-out' }}>

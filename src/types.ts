@@ -52,12 +52,34 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   crossword: { timePerQuestion: 15 },
   flower: { timePerQuestion: 0 },
 };
+export type LeaderboardEntry = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  classroomId: string;
+  classroomName: string;
+  gameId: string;
+  gameName: string;
+  score: number;
+  correctCount: number;
+  totalCount: number;
+  timestamp: number;
+};
+
+export type SelectedPlayer = {
+  studentId: string;
+  studentName: string;
+  classroomId: string;
+  classroomName: string;
+} | null;
+
 export type AppData = {
   subjects: Subject[];
   questions: Question[];
   classrooms: Classroom[];
   selectedQuestionIds: string[];
   gameSettings: GameSettings;
+  leaderboard: LeaderboardEntry[];
   settings: { lastUpdated: number; version: string; geminiApiKey?: string };
 };
 export type Team = { id: string; name: string; score: number; color: string; position?: number };

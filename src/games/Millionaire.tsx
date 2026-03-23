@@ -4,7 +4,7 @@ import { Users, SkipForward, MessageCircle, BarChart3, X } from 'lucide-react';
 import { playDing, playBuzz, playTick } from '../utils/audio';
 import { MathContent } from '../MathContent';
 
-export default function Millionaire({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function Millionaire({ questions, onReplay, onGameEnd }: { questions: Question[], onReplay?: () => void, onGameEnd?: (score: number, correct: number, total: number) => void }) {
   const [current, setCurrent] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -37,6 +37,7 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
           setTimeout(() => {
             setStatus('wrong');
             playBuzz();
+            onGameEnd?.(score, current, questions.length);
             setHistory(prev => {
               const newHistory = [score, ...prev].slice(0, 5);
               localStorage.setItem('millionaire_history', JSON.stringify(newHistory));
@@ -70,12 +71,14 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
         } else {
           setStatus('end');
           saveHistory(newScore);
+          onGameEnd?.(newScore, current + 1, questions.length);
         }
       }, 2000);
     } else {
       setStatus('wrong');
       playBuzz();
       saveHistory(score);
+      onGameEnd?.(score, current, questions.length);
     }
   };
 
