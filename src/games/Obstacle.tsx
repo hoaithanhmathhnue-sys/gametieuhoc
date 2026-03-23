@@ -137,7 +137,7 @@ export default function Obstacle({ questions, onReplay }: { questions: Question[
         
         <div className="flex-1 flex flex-col justify-center">
           {q.image && <img src={q.image} className="h-40 object-contain mx-auto mb-6 rounded-xl" />}
-          <h3 className="text-2xl font-bold text-center mb-8 text-gray-800">{q?.text}</h3>
+          <h3 className="text-2xl font-bold text-center mb-8 text-gray-800" dangerouslySetInnerHTML={{ __html: q?.text || '' }}></h3>
           
           <div className="grid grid-cols-1 gap-4">
             {q?.options.map((opt, i) => (
@@ -158,7 +158,7 @@ export default function Obstacle({ questions, onReplay }: { questions: Question[
                     'bg-blue-500'}`}>
                   {['A', 'B', 'C', 'D'][i]}
                 </span>
-                <span className="flex-1">{opt}</span>
+                <span className="flex-1" dangerouslySetInnerHTML={{ __html: opt }}></span>
               </button>
             ))}
           </div>

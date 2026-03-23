@@ -220,7 +220,7 @@ export default function Flower({ questions, onReplay }: { questions: Question[],
             🌸 Hoa số {activeF + 1} — Đội {turn + 1} trả lời
           </div>
           {flowers[activeF].q.image && <img src={flowers[activeF].q.image} className="h-48 object-contain mx-auto mb-6 rounded-xl shadow-md" />}
-          <h2 className="text-2xl font-bold mb-8 text-gray-800 leading-relaxed">{flowers[activeF].q.text}</h2>
+          <h2 className="text-2xl font-bold mb-8 text-gray-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: flowers[activeF].q.text || '' }}></h2>
           <div className="grid grid-cols-2 gap-5">
             {flowers[activeF].q.options.map((opt, i) => (
               <button
@@ -232,7 +232,7 @@ export default function Flower({ questions, onReplay }: { questions: Question[],
                 <span className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-pink-400 to-rose-400 text-white rounded-full font-black text-lg shadow-sm shrink-0">
                   {['A', 'B', 'C', 'D'][i]}
                 </span>
-                <span className="flex-1">{opt}</span>
+                <span className="flex-1" dangerouslySetInnerHTML={{ __html: opt }}></span>
               </button>
             ))}
           </div>

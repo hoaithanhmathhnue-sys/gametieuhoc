@@ -14,6 +14,8 @@ const defaultData: AppData = {
     }
   ],
   questions: [],
+  classrooms: [],
+  selectedQuestionIds: [],
   settings: { lastUpdated: Date.now(), version: '1.0' }
 };
 
@@ -33,16 +35,24 @@ for (let i = 0; i < 15; i++) {
   });
 }
 
+// Migrate old data to new format
+const migrateData = (data: any): AppData => {
+  if (!data.classrooms) data.classrooms = [];
+  if (!data.selectedQuestionIds) data.selectedQuestionIds = [];
+  return data as AppData;
+};
+
 export const loadData = (): AppData => {
   const str = localStorage.getItem(DATA_KEY);
   if (!str) {
     saveData(defaultData);
     return defaultData;
   }
-  try { return JSON.parse(str); } catch { return defaultData; }
+  try { return migrateData(JSON.parse(str)); } catch { return defaultData; }
 };
 
 export const saveData = (data: AppData) => {
   data.settings.lastUpdated = Date.now();
   localStorage.setItem(DATA_KEY, JSON.stringify(data));
 };
+

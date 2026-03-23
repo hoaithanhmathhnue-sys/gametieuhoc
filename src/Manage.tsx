@@ -2,12 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AppData, Question, Subject, Topic, Difficulty } from './types';
 import { saveData } from './store';
 import { parseDocx } from './docxParser';
-import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import ClassroomManage from './ClassroomManage';
+import { GoogleGenAI } from '@google/genai';
+import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School } from 'lucide-react';
 
 export default function Manage({ data, onBack, onDataChange }: { data: AppData, onBack: () => void, onDataChange: (d: AppData) => void }) {
-  const [tab, setTab] = useState<'questions'|'subjects'|'import'>('questions');
+  const [tab, setTab] = useState<'questions'|'subjects'|'import'|'classrooms'>('questions');
   const [subjects, setSubjects] = useState(data.subjects);
   const [questions, setQuestions] = useState(data.questions);
+  const [classrooms, setClassrooms] = useState(data.classrooms || []);
   
   // Question Form
   const [editingQ, setEditingQ] = useState<Partial<Question> | null>(null);
@@ -17,19 +20,105 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const itemsPerPage = 10;
   
+  // AI Generation
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKey, setApiKey] = useState(data.settings.geminiApiKey || '');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiCount, setAiCount] = useState(5);
+  const [aiDifficulty, setAiDifficulty] = useState('medium');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSubjId, setAiSubjId] = useState(subjects[0]?.id || '');
+  const [aiTopicId, setAiTopicId] = useState('');
+  
   // Subject/Topic Form
   const [editingSubj, setEditingSubj] = useState<Partial<Subject> | null>(null);
   const [editingTopic, setEditingTopic] = useState<{subjId: string, topic: Partial<Topic>} | null>(null);
 
   const handleSave = () => {
-    const newData = { ...data, subjects, questions };
+    const newData = { ...data, subjects, questions, classrooms, settings: { ...data.settings, geminiApiKey: apiKey } };
     saveData(newData);
     onDataChange(newData);
     alert('Đã lưu thành công!');
   };
 
+  // Select All / Deselect All
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredQuestions.map(q => q.id)));
+  };
+  const deselectAll = () => setSelectedIds(new Set());
+  const deleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Xóa ${selectedIds.size} câu hỏi đã chọn?`)) return;
+    setQuestions(p => p.filter(q => !selectedIds.has(q.id)));
+    setSelectedIds(new Set());
+  };
+  const deleteAllQuestions = () => {
+    if (!confirm(`CẢNH BÁO: Xóa tất cả ${questions.length} câu hỏi? Hành động này không thể hoàn tác!`)) return;
+    setQuestions([]);
+    setSelectedIds(new Set());
+  };
+  const loadSelectedToGame = () => {
+    if (selectedIds.size === 0) return alert('Vui lòng chọn ít nhất 1 câu hỏi!');
+    const selectedQs = questions.filter(q => selectedIds.has(q.id));
+    const newData = { ...data, subjects, questions, classrooms, selectedQuestionIds: Array.from(selectedIds) as string[], settings: { ...data.settings, geminiApiKey: apiKey } };
+    saveData(newData);
+    onDataChange(newData);
+    alert(`Đã nạp ${selectedQs.length} câu hỏi vào trò chơi! Quay lại trang chủ để chơi.`);
+  };
+
+  // AI Question Generation
+  const generateAiQuestions = async () => {
+    if (!apiKey) { setShowApiKeyModal(true); return; }
+    if (!aiTopic.trim()) return alert('Vui lòng nhập chủ đề cho câu hỏi!');
+    setAiLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const diffLabel = aiDifficulty === 'easy' ? 'dễ, phù hợp tiểu học' : aiDifficulty === 'medium' ? 'trung bình' : aiDifficulty === 'hard' ? 'khó' : 'rất khó';
+      const prompt = `Hãy tạo ${aiCount} câu hỏi trắc nghiệm (4 đáp án A, B, C, D) về chủ đề "${aiTopic}", mức độ ${diffLabel}. Trả về JSON array với format:\n[{\n  "text": "Nội dung câu hỏi",\n  "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],\n  "answer": 0\n}]\nTrong đó answer là index (0-3) của đáp án đúng. CHỈ trả về JSON, không thêm text nào khác.`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt
+      });
+      
+      let text = response.text || '';
+      // Clean markdown code blocks if present
+      text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error('AI trả về format không hợp lệ');
+      
+      const newQs: Question[] = parsed.map((p: any, i: number) => ({
+        id: `q_ai_${Date.now()}_${i}`,
+        subjectId: aiSubjId || subjects[0]?.id || '',
+        topicId: aiTopicId || subjects.find(s => s.id === aiSubjId)?.topics[0]?.id || '',
+        text: p.text,
+        options: p.options,
+        answer: typeof p.answer === 'number' ? p.answer : 0,
+        difficulty: aiDifficulty as Difficulty,
+        image: null,
+        createdAt: Date.now()
+      }));
+      
+      setQuestions(prev => [...newQs, ...prev]);
+      setShowAiModal(false);
+      setAiTopic('');
+      alert(`Đã tạo ${newQs.length} câu hỏi bằng AI thành công!`);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message?.includes('API key') || err.status === 401) {
+        alert('API key không hợp lệ. Vui lòng kiểm tra lại.');
+        setShowApiKeyModal(true);
+      } else {
+        alert('Lỗi tạo câu hỏi AI: ' + (err.message || 'Không xác định'));
+      }
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // Cảnh báo khi rời trang mà chưa lưu
-  const hasChanges = JSON.stringify(data.subjects) !== JSON.stringify(subjects) || JSON.stringify(data.questions) !== JSON.stringify(questions);
+  const hasChanges = JSON.stringify(data.subjects) !== JSON.stringify(subjects) || JSON.stringify(data.questions) !== JSON.stringify(questions) || JSON.stringify(data.classrooms || []) !== JSON.stringify(classrooms);
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (hasChanges) {
@@ -90,7 +179,7 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
           options: p.options,
           answer: p.answer,
           difficulty: p.difficulty as Difficulty,
-          image: null,
+          image: p.image || null,
           createdAt: Date.now()
         }));
         setQuestions(prev => [...newQs, ...prev]);
@@ -199,10 +288,11 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
         <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700"><Save size={20}/> Lưu thay đổi</button>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 flex-wrap">
         <button onClick={() => setTab('questions')} className={`px-4 py-2 rounded-xl font-bold ${tab==='questions'?'bg-blue-600 text-white':'bg-white'}`}>Câu hỏi ({questions.length})</button>
         <button onClick={() => setTab('subjects')} className={`px-4 py-2 rounded-xl font-bold ${tab==='subjects'?'bg-blue-600 text-white':'bg-white'}`}>Môn học & Chủ đề</button>
         <button onClick={() => setTab('import')} className={`px-4 py-2 rounded-xl font-bold ${tab==='import'?'bg-blue-600 text-white':'bg-white'}`}>Nhập / Xuất</button>
+        <button onClick={() => setTab('classrooms')} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-1 ${tab==='classrooms'?'bg-teal-600 text-white':'bg-white'}`}><School size={16} /> Lớp học</button>
       </div>
 
       {tab === 'questions' && (
@@ -244,8 +334,8 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
             </div>
           </div>
           <div className="col-span-1 lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm flex flex-col h-[700px]">
-            <div className="flex gap-4 mb-4">
-              <select className="p-2 border rounded-lg w-1/3" value={filterSubj} onChange={e => { setFilterSubj(e.target.value); setPage(1); }}>
+            <div className="flex gap-3 mb-3 flex-wrap">
+              <select className="p-2 border rounded-lg w-1/4" value={filterSubj} onChange={e => { setFilterSubj(e.target.value); setPage(1); }}>
                 <option value="">Tất cả môn học</option>
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -253,16 +343,21 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                 <input type="text" placeholder="Tìm kiếm câu hỏi..." className="w-full pl-10 p-2 border rounded-lg" value={searchQ} onChange={e => { setSearchQ(e.target.value); setPage(1); }} />
               </div>
+              <button onClick={() => { setShowAiModal(true); if (!apiKey) setShowApiKeyModal(true); }} className="flex items-center gap-1 bg-purple-100 text-purple-700 px-3 py-2 rounded-lg font-bold text-sm hover:bg-purple-200"><Sparkles size={14} /> Tạo bằng AI</button>
+            </div>
+            {/* Action bar */}
+            <div className="flex gap-2 mb-3 flex-wrap items-center">
+              <button onClick={selectedIds.size === filteredQuestions.length ? deselectAll : selectAll} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-blue-100">
+                {selectedIds.size === filteredQuestions.length && filteredQuestions.length > 0 ? <><CheckSquare size={14} /> Bỏ chọn tất cả</> : <><Square size={14} /> Chọn tất cả</>}
+              </button>
               {selectedIds.size > 0 && (
-                <button onClick={() => {
-                  if (confirm(`Xóa ${selectedIds.size} câu hỏi đã chọn?`)) {
-                    setQuestions(p => p.filter(q => !selectedIds.has(q.id)));
-                    setSelectedIds(new Set());
-                  }
-                }} className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg font-bold text-sm hover:bg-red-200 flex items-center gap-1">
-                  <Trash2 size={14}/> Xóa {selectedIds.size} câu đã chọn
-                </button>
+                <>
+                  <span className="text-xs text-gray-500 font-medium">Đã chọn: {selectedIds.size}</span>
+                  <button onClick={deleteSelected} className="flex items-center gap-1 bg-red-100 text-red-600 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-200"><Trash2 size={14} /> Xóa đã chọn</button>
+                  <button onClick={loadSelectedToGame} className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-green-200"><Play size={14} /> Nạp vào trò chơi ({selectedIds.size})</button>
+                </>
               )}
+              <button onClick={deleteAllQuestions} className="flex items-center gap-1 bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-red-100 ml-auto"><Trash2 size={14} /> Xóa tất cả</button>
             </div>
             
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
@@ -371,6 +466,10 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
         </div>
       )}
 
+      {tab === 'classrooms' && (
+        <ClassroomManage classrooms={classrooms} onChange={setClassrooms} />
+      )}
+
       {tab === 'import' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
@@ -402,6 +501,63 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
             <button onClick={deleteAllData} className="w-full flex items-center justify-center gap-2 bg-red-100 text-red-700 px-6 py-3 rounded-xl font-bold hover:bg-red-200 mt-auto">
               <Trash2 size={20}/> Xóa tất cả
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Question Modal */}
+      {showAiModal && !showApiKeyModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Sparkles size={20} className="text-purple-600" /> Tạo câu hỏi bằng AI</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="font-bold text-sm block mb-1">Chủ đề *</label>
+                <input type="text" placeholder="VD: Phép cộng số có 3 chữ số" className="w-full p-3 border-2 rounded-xl" value={aiTopic} onChange={e => setAiTopic(e.target.value)} autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-sm block mb-1">Số câu</label>
+                  <select className="w-full p-2 border rounded-lg" value={aiCount} onChange={e => setAiCount(Number(e.target.value))}>
+                    {[3,5,10,15,20].map(n => <option key={n} value={n}>{n} câu</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-sm block mb-1">Độ khó</label>
+                  <select className="w-full p-2 border rounded-lg" value={aiDifficulty} onChange={e => setAiDifficulty(e.target.value)}>
+                    <option value="easy">Dễ</option><option value="medium">Trung bình</option><option value="hard">Khó</option><option value="super_hard">Siêu khó</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="font-bold text-sm block mb-1">Môn học</label>
+                <select className="w-full p-2 border rounded-lg" value={aiSubjId} onChange={e => setAiSubjId(e.target.value)}>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={generateAiQuestions} disabled={aiLoading} className="flex-1 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {aiLoading ? <><Loader2 size={18} className="animate-spin" /> Đang tạo...</> : <><Sparkles size={18} /> Tạo câu hỏi</>}
+                </button>
+                <button onClick={() => setShowAiModal(false)} className="px-6 py-3 bg-gray-200 font-bold rounded-xl">Hủy</button>
+              </div>
+              <button onClick={() => setShowApiKeyModal(true)} className="w-full text-xs text-gray-400 hover:text-purple-600 flex items-center justify-center gap-1"><Key size={12} /> Đổi API Key</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Key size={20} className="text-amber-600" /> Nhập API Key Gemini</h2>
+            <p className="text-sm text-gray-500 mb-4">Truy cập <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-600 underline">aistudio.google.com/apikey</a> để lấy API key miễn phí.</p>
+            <input type="text" placeholder="Dán API key vào đây..." className="w-full p-3 border-2 rounded-xl font-mono text-sm mb-4" value={apiKey} onChange={e => setApiKey(e.target.value)} autoFocus />
+            <div className="flex gap-3">
+              <button onClick={() => { if (!apiKey.trim()) return alert('Vui lòng nhập API key!'); setShowApiKeyModal(false); setShowAiModal(true); }} className="flex-1 py-3 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600">Lưu & Tiếp tục</button>
+              <button onClick={() => { setShowApiKeyModal(false); setShowAiModal(false); }} className="px-6 py-3 bg-gray-200 font-bold rounded-xl">Hủy</button>
+            </div>
           </div>
         </div>
       )}

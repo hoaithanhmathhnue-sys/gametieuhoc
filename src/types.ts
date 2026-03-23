@@ -12,9 +12,23 @@ export type Question = {
   image: string | null;
   createdAt: number;
 };
+export type Student = {
+  id: string;
+  name: string;
+  dob: string;
+  className: string;
+};
+export type Classroom = {
+  id: string;
+  name: string;
+  students: Student[];
+};
 export type AppData = {
   subjects: Subject[];
   questions: Question[];
-  settings: { lastUpdated: number; version: string };
+  classrooms: Classroom[];
+  selectedQuestionIds: string[];
+  settings: { lastUpdated: number; version: string; geminiApiKey?: string };
 };
 export type Team = { id: string; name: string; score: number; color: string; position?: number };
+

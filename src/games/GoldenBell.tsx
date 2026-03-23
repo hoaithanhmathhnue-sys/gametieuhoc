@@ -146,7 +146,7 @@ export default function GoldenBell({ questions, onReplay }: { questions: Questio
         ) : (
           <div className="animate-in fade-in duration-500">
             {q.image && <img src={q.image} className="h-48 object-contain mx-auto mb-8 rounded-xl" />}
-            <h2 className="text-4xl font-bold mb-12 leading-relaxed text-gray-800">{q?.text}</h2>
+            <h2 className="text-4xl font-bold mb-12 leading-relaxed text-gray-800" dangerouslySetInnerHTML={{ __html: q?.text || '' }}></h2>
             
             {step !== 'question' && (
               <div className="grid grid-cols-2 gap-6">
@@ -161,7 +161,7 @@ export default function GoldenBell({ questions, onReplay }: { questions: Questio
                         'bg-blue-200 text-blue-700'}`}>
                       {['A', 'B', 'C', 'D'][i]}
                     </span>
-                    <span className="flex-1">{opt}</span>
+                    <span className="flex-1" dangerouslySetInnerHTML={{ __html: opt }}></span>
                   </div>
                 ))}
               </div>

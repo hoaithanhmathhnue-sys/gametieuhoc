@@ -4,6 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Góc Game Lớp Học</title>
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['\\(', '\\)'], ['$', '$']],
+          displayMath: [['\\[', '\\]'], ['$$', '$$']],
+          processEscapes: true
+        },
+        options: {
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+        },
+        startup: {
+          ready: () => {
+            MathJax.startup.defaultReady();
+            // Re-typeset when DOM changes
+            const observer = new MutationObserver(() => {
+              if (MathJax.typesetPromise) {
+                MathJax.typesetPromise().catch(() => {});
+              }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+          }
+        }
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
   </head>
   <body>
     <div id="root"></div>

@@ -33,7 +33,6 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
     const t = setInterval(() => {
       setTimeLeft(p => {
         if (p <= 1) {
-          // Timer hết — kết thúc trong callback để tránh race condition
           setTimeout(() => {
             setStatus('wrong');
             playBuzz();
@@ -95,7 +94,7 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
       setFriendHint(hints[Math.floor(Math.random() * hints.length)]);
     } else if (type === 'audience') {
       const chart = [0, 0, 0, 0];
-      const correctPercent = Math.floor(Math.random() * 11) + 60; // 60-70%
+      const correctPercent = Math.floor(Math.random() * 11) + 60;
       chart[q.answer] = correctPercent;
       let remaining = 100 - correctPercent;
       const wrongIndices = [0,1,2,3].filter(i => i !== q.answer);
@@ -112,6 +111,23 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
   };
 
   const timerColor = timeLeft > 10 ? 'text-green-400' : timeLeft > 5 ? 'text-yellow-400' : 'text-red-500 animate-pulse';
+
+  // Render question text with MathJax and images
+  const renderContent = (text: string) => {
+    if (!text) return null;
+    // Check if text contains LaTeX patterns
+    const hasLatex = text.includes('\\(') || text.includes('\\[') || text.includes('$');
+    if (hasLatex) {
+      return <span dangerouslySetInnerHTML={{ __html: text }} />;
+    }
+    return <span>{text}</span>;
+  };
+
+  // Render image if present
+  const renderImage = (image: string | null | undefined) => {
+    if (!image) return null;
+    return <img src={image} className="max-h-48 object-contain rounded-xl mx-auto my-4" alt="Hình minh họa" />;
+  };
 
   if (status === 'end' || !q) {
     return (
@@ -145,29 +161,69 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 bg-gradient-to-b from-blue-900 to-blue-950 text-white rounded-3xl m-4 shadow-2xl relative overflow-hidden">
-      <div className={`absolute top-8 right-8 text-4xl font-bold ${timerColor}`}>{timeLeft}s</div>
-      <div className="absolute top-8 left-8 text-xl font-bold text-white">Câu {current + 1} / 12</div>
-      
-      <div className="absolute top-8 flex gap-4">
-        <button onClick={() => useLifeline('5050')} disabled={usedLifelines.includes('5050')} className={`p-3 rounded-full font-bold ${usedLifelines.includes('5050')?'bg-gray-600':'bg-blue-600 hover:bg-blue-500'}`} title="50:50">50:50</button>
-        <button onClick={() => useLifeline('friend')} disabled={usedLifelines.includes('friend')} className={`p-3 rounded-full ${usedLifelines.includes('friend')?'bg-gray-600':'bg-blue-600 hover:bg-blue-500'}`} title="Hỏi bạn bên cạnh"><MessageCircle size={24}/></button>
-        <button onClick={() => useLifeline('audience')} disabled={usedLifelines.includes('audience')} className={`p-3 rounded-full ${usedLifelines.includes('audience')?'bg-gray-600':'bg-blue-600 hover:bg-blue-500'}`} title="Hỏi ý kiến khán giả"><BarChart3 size={24}/></button>
+    <div className="flex flex-col items-center justify-center h-full p-6 md:p-8 bg-gradient-to-b from-blue-900 to-blue-950 text-white rounded-3xl m-4 shadow-2xl relative overflow-hidden">
+      {/* Top Bar: Question number + Timer */}
+      <div className="w-full max-w-4xl flex justify-between items-center mb-4">
+        <div className="text-xl font-bold text-white/90 bg-white/10 px-4 py-2 rounded-full">
+          Câu {current + 1} / 12
+        </div>
+        <div className={`text-4xl font-bold ${timerColor} bg-white/10 px-5 py-2 rounded-full`}>
+          {timeLeft}s
+        </div>
       </div>
 
+      {/* Lifeline Buttons - Tách riêng, rõ ràng */}
+      <div className="flex gap-3 mb-6">
+        <button 
+          onClick={() => useLifeline('5050')} 
+          disabled={usedLifelines.includes('5050')} 
+          className={`px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 transition-all border-2
+            ${usedLifelines.includes('5050') 
+              ? 'bg-gray-700/50 border-gray-600 text-gray-500 cursor-not-allowed line-through' 
+              : 'bg-blue-600 border-blue-400 hover:bg-blue-500 hover:scale-105 shadow-lg shadow-blue-500/30'}`} 
+          title="50:50"
+        >
+          <span className="text-lg">50:50</span>
+        </button>
+        <button 
+          onClick={() => useLifeline('friend')} 
+          disabled={usedLifelines.includes('friend')} 
+          className={`px-4 py-2.5 rounded-full flex items-center gap-2 transition-all border-2 font-bold text-sm
+            ${usedLifelines.includes('friend') 
+              ? 'bg-gray-700/50 border-gray-600 text-gray-500 cursor-not-allowed' 
+              : 'bg-green-600 border-green-400 hover:bg-green-500 hover:scale-105 shadow-lg shadow-green-500/30'}`} 
+          title="Hỏi bạn bên cạnh"
+        >
+          <MessageCircle size={20}/> Hỏi bạn
+        </button>
+        <button 
+          onClick={() => useLifeline('audience')} 
+          disabled={usedLifelines.includes('audience')} 
+          className={`px-4 py-2.5 rounded-full flex items-center gap-2 transition-all border-2 font-bold text-sm
+            ${usedLifelines.includes('audience') 
+              ? 'bg-gray-700/50 border-gray-600 text-gray-500 cursor-not-allowed' 
+              : 'bg-purple-600 border-purple-400 hover:bg-purple-500 hover:scale-105 shadow-lg shadow-purple-500/30'}`} 
+          title="Hỏi ý kiến khán giả"
+        >
+          <BarChart3 size={20}/> Khán giả
+        </button>
+      </div>
+
+      {/* Friend Hint Popup */}
       {friendHint && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-white text-blue-900 p-4 rounded-2xl shadow-xl z-10 flex items-start gap-3 animate-in fade-in slide-in-from-top-4">
+        <div className="mb-4 bg-white text-blue-900 p-4 rounded-2xl shadow-xl z-10 flex items-start gap-3 max-w-md animate-bounce-in">
           <span className="text-2xl">💡</span>
           <div>
             <p className="font-bold mb-1">Gợi ý từ người bạn:</p>
             <p>{friendHint}</p>
           </div>
-          <button onClick={() => setFriendHint(null)} className="text-gray-400 hover:text-gray-600"><X size={16}/></button>
+          <button onClick={() => setFriendHint(null)} className="text-gray-400 hover:text-gray-600 ml-2"><X size={16}/></button>
         </div>
       )}
 
+      {/* Audience Chart Popup */}
       {audienceChart && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-white text-blue-900 p-6 rounded-2xl shadow-xl z-10 animate-in fade-in slide-in-from-top-4 w-80">
+        <div className="mb-4 bg-white text-blue-900 p-6 rounded-2xl shadow-xl z-10 w-80 animate-bounce-in">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold">Ý kiến khán giả</h3>
             <button onClick={() => setAudienceChart(null)} className="text-gray-400 hover:text-gray-600"><X size={16}/></button>
@@ -184,26 +240,29 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
         </div>
       )}
 
-      {q.image && <img src={q.image} className="h-48 object-contain mb-8 rounded-xl" />}
+      {/* Question Image */}
+      {renderImage(q.image)}
       
-      <div className="w-full max-w-4xl bg-blue-800 border-2 border-blue-400 p-8 rounded-full text-center text-2xl font-bold mb-12 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-        {q.text}
+      {/* Question Text */}
+      <div className="w-full max-w-4xl bg-blue-800/80 border-2 border-blue-400 p-6 md:p-8 rounded-full text-center text-lg md:text-2xl font-bold mb-8 shadow-[0_0_15px_rgba(59,130,246,0.5)] backdrop-blur">
+        {renderContent(q.text)}
       </div>
 
-      <div className="grid grid-cols-2 gap-6 w-full max-w-4xl">
+      {/* Answer Options */}
+      <div className="grid grid-cols-2 gap-4 md:gap-6 w-full max-w-4xl">
         {q.options.map((opt, i) => (
           <button 
             key={i} 
             onClick={() => handleAnswer(i)}
             disabled={hiddenOpts.includes(i) || status !== 'playing'}
-            className={`p-6 rounded-full text-xl font-bold border-2 transition-all text-left pl-8
-              ${hiddenOpts.includes(i) ? 'opacity-0' : ''}
-              ${status === 'correct' && i === q.answer ? 'bg-green-500 border-green-400 animate-pulse' : 
+            className={`p-4 md:p-6 rounded-full text-base md:text-xl font-bold border-2 transition-all text-left pl-6 md:pl-8
+              ${hiddenOpts.includes(i) ? 'opacity-0 pointer-events-none' : ''}
+              ${status === 'correct' && i === q.answer ? 'bg-green-500 border-green-400 animate-pulse scale-105' : 
                 status === 'wrong' && i === q.answer ? 'bg-green-500 border-green-400' :
-                status === 'wrong' ? 'bg-red-500 border-red-400' : 
-                'bg-blue-800 border-blue-400 hover:bg-blue-700'}`}
+                status === 'wrong' ? 'bg-red-500/60 border-red-400/60' : 
+                'bg-blue-800/70 border-blue-400/60 hover:bg-blue-700 hover:border-blue-300 hover:scale-[1.02]'}`}
           >
-            <span className="text-yellow-400 mr-4">{['A', 'B', 'C', 'D'][i]}:</span> {opt}
+            <span className="text-yellow-400 mr-3 md:mr-4">{['A', 'B', 'C', 'D'][i]}:</span> {renderContent(opt)}
           </button>
         ))}
       </div>
