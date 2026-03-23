@@ -356,14 +356,11 @@ export default function App() {
                       <span key={i} className="text-2xl md:text-3xl animate-bounce" style={{ animationDelay: `${i * 0.15}s`, animationDuration: '2s' }}>{emoji}</span>
                     ))}
                   </div>
-                  <h2 className="text-3xl md:text-4xl font-black mb-5 tracking-tight leading-none">
-                    <span className="inline-block" style={{
-                      background: 'linear-gradient(90deg, #00897b, #6366f1, #ec4899, #f59e0b, #8b5cf6, #10b981)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}>
-                      HỌC VUI MỖI NGÀY
-                    </span>
+                  <h2 className="text-5xl md:text-6xl font-black mb-5 tracking-tight leading-none" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
+                    <span className="text-teal-600">HỌC </span>
+                    <span className="text-indigo-500">VUI </span>
+                    <span className="text-pink-500">MỖI </span>
+                    <span className="text-amber-500">NGÀY</span>
                   </h2>
                   <p className="text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
                     <span className="text-teal-600">Khám phá </span>
