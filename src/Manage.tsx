@@ -3,6 +3,7 @@ import { AppData, Question, Subject, Topic, Difficulty, GameSettings, CrosswordC
 import { saveData } from './store';
 import { parseDocx } from './docxParser';
 import { parsePdf } from './pdfParser';
+import { MathContent } from './MathContent';
 import ClassroomManage from './ClassroomManage';
 import { GoogleGenAI } from '@google/genai';
 import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School, Settings } from 'lucide-react';
@@ -400,7 +401,7 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                     })} className="w-4 h-4 rounded" />
                     {q.image && <img src={q.image} className="w-12 h-12 object-cover rounded-lg" />}
                     <div>
-                      <p className="font-bold line-clamp-1">{q.text}</p>
+                      <p className="font-bold line-clamp-1"><MathContent html={q.text} /></p>
                       <p className="text-sm text-gray-500">{subjects.find(s=>s.id===q.subjectId)?.name} • {q.difficulty}</p>
                     </div>
                   </div>
