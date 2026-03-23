@@ -356,12 +356,12 @@ export default function App() {
                       <span key={i} className="text-2xl md:text-3xl animate-bounce" style={{ animationDelay: `${i * 0.15}s`, animationDuration: '2s' }}>{emoji}</span>
                     ))}
                   </div>
-                  <h2 className="text-5xl md:text-7xl font-black mb-5 tracking-tight leading-none">
+                  <h2 className="text-4xl md:text-5xl font-black mb-5 tracking-tight leading-none">
                     <span className="inline-block" style={{
                       background: 'linear-gradient(135deg, #00897b 0%, #6366f1 20%, #ec4899 40%, #f59e0b 60%, #8b5cf6 80%, #10b981 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      filter: 'drop-shadow(3px 3px 0px rgba(0,0,0,0.15))',
+                      WebkitTextStroke: '1px rgba(0,0,0,0.05)',
                     }}>
                       HỌC VUI MỖI NGÀY
                     </span>
