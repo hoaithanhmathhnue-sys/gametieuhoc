@@ -358,22 +358,12 @@ export default function App() {
                   </div>
                   <h2 className="text-5xl md:text-7xl font-black mb-5 tracking-tight leading-none">
                     <span className="inline-block" style={{
-                      background: 'linear-gradient(135deg, #00897b 0%, #6366f1 25%, #ec4899 50%, #f59e0b 75%, #10b981 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      filter: 'drop-shadow(3px 3px 0px rgba(0,0,0,0.15))',
-                      textShadow: 'none',
-                    }}>
-                      GÓC GAME
-                    </span>
-                    <br />
-                    <span className="inline-block mt-1" style={{
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 25%, #8b5cf6 50%, #06b6d4 75%, #22c55e 100%)',
+                      background: 'linear-gradient(135deg, #00897b 0%, #6366f1 20%, #ec4899 40%, #f59e0b 60%, #8b5cf6 80%, #10b981 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       filter: 'drop-shadow(3px 3px 0px rgba(0,0,0,0.15))',
                     }}>
-                      LỚP HỌC
+                      HỌC VUI MỖI NGÀY
                     </span>
                   </h2>
                   <p className="text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
