@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppData, Question, Subject, Topic, Difficulty } from './types';
+import { AppData, Question, Subject, Topic, Difficulty, GameSettings, CrosswordConfig, CrosswordEntry, DEFAULT_GAME_SETTINGS } from './types';
 import { saveData } from './store';
 import { parseDocx } from './docxParser';
 import ClassroomManage from './ClassroomManage';
 import { GoogleGenAI } from '@google/genai';
-import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School } from 'lucide-react';
+import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School, Settings } from 'lucide-react';
 
 export default function Manage({ data, onBack, onDataChange }: { data: AppData, onBack: () => void, onDataChange: (d: AppData) => void }) {
-  const [tab, setTab] = useState<'questions'|'subjects'|'import'|'classrooms'>('questions');
+  const [tab, setTab] = useState<'questions'|'subjects'|'import'|'classrooms'|'settings'>('questions');
+  const [gameSettings, setGameSettings] = useState<GameSettings>(data.gameSettings || { ...DEFAULT_GAME_SETTINGS });
   const [subjects, setSubjects] = useState(data.subjects);
   const [questions, setQuestions] = useState(data.questions);
   const [classrooms, setClassrooms] = useState(data.classrooms || []);
@@ -36,7 +37,7 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
   const [editingTopic, setEditingTopic] = useState<{subjId: string, topic: Partial<Topic>} | null>(null);
 
   const handleSave = () => {
-    const newData = { ...data, subjects, questions, classrooms, settings: { ...data.settings, geminiApiKey: apiKey } };
+    const newData = { ...data, subjects, questions, classrooms, gameSettings, settings: { ...data.settings, geminiApiKey: apiKey } };
     saveData(newData);
     onDataChange(newData);
     alert('Đã lưu thành công!');
@@ -293,6 +294,7 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
         <button onClick={() => setTab('subjects')} className={`px-4 py-2 rounded-xl font-bold ${tab==='subjects'?'bg-blue-600 text-white':'bg-white'}`}>Môn học & Chủ đề</button>
         <button onClick={() => setTab('import')} className={`px-4 py-2 rounded-xl font-bold ${tab==='import'?'bg-blue-600 text-white':'bg-white'}`}>Nhập / Xuất</button>
         <button onClick={() => setTab('classrooms')} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-1 ${tab==='classrooms'?'bg-teal-600 text-white':'bg-white'}`}><School size={16} /> Lớp học</button>
+        <button onClick={() => setTab('settings')} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-1 ${tab==='settings'?'bg-purple-600 text-white':'bg-white'}`}><Settings size={16} /> Cài đặt Game</button>
       </div>
 
       {tab === 'questions' && (
@@ -501,6 +503,203 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
             <button onClick={deleteAllData} className="w-full flex items-center justify-center gap-2 bg-red-100 text-red-700 px-6 py-3 rounded-xl font-bold hover:bg-red-200 mt-auto">
               <Trash2 size={20}/> Xóa tất cả
             </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'settings' && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-200">
+            <h2 className="text-xl font-bold text-purple-800 flex items-center gap-2 mb-2"><Settings size={20} /> Cài đặt trò chơi</h2>
+            <p className="text-sm text-purple-600">Thiết lập thời gian và tùy chọn cho từng trò chơi. Nhấn "Lưu thay đổi" để áp dụng.</p>
+          </div>
+
+          {/* Time Config for all 6 games */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {([
+              { key: 'millionaire' as const, name: '💰 Ai là triệu phú', desc: 'Thời gian cho mỗi câu hỏi', defaultTime: 30 },
+              { key: 'flipCard' as const, name: '🃏 Lật thẻ bí ẩn', desc: '0 = không giới hạn', defaultTime: 0 },
+              { key: 'obstacle' as const, name: '🏁 Đường đua vượt chướng ngại vật', desc: '0 = không giới hạn', defaultTime: 0 },
+              { key: 'goldenBell' as const, name: '🔔 Rung chuông vàng', desc: '0 = không giới hạn', defaultTime: 0 },
+              { key: 'crossword' as const, name: '🔤 Ô chữ bí mật', desc: 'Thời gian cho mỗi ô chữ', defaultTime: 15 },
+              { key: 'flower' as const, name: '🌸 Hái hoa dân chủ', desc: '0 = không giới hạn', defaultTime: 0 },
+            ]).map(game => (
+              <div key={game.key} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <h3 className="font-bold text-lg mb-1">{game.name}</h3>
+                <p className="text-xs text-gray-400 mb-3">{game.desc}</p>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-600 whitespace-nowrap">⏱️ Thời gian:</label>
+                  <input 
+                    type="number" min={0} max={300}
+                    className="w-20 p-2 border-2 rounded-lg text-center font-bold text-lg focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                    value={gameSettings[game.key].timePerQuestion}
+                    onChange={e => setGameSettings(prev => ({
+                      ...prev,
+                      [game.key]: { ...prev[game.key], timePerQuestion: parseInt(e.target.value) || 0 }
+                    }))}
+                  />
+                  <span className="text-sm text-gray-500">giây</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Crossword Special Config */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-amber-200">
+            <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2 mb-1">🔤 Cài đặt Ô chữ bí mật (nâng cao)</h2>
+            <p className="text-sm text-amber-600 mb-4">Giáo viên có thể điền trước đáp án các hàng (tối đa 9 ký tự/hàng) và chữ bí mật (dãy dọc ô màu vàng)</p>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left: Entries */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-700">Đáp án các hàng</h3>
+                  <button 
+                    onClick={() => {
+                      const entries = gameSettings.crossword.config?.entries || [];
+                      if (entries.length >= 12) return alert('Tối đa 12 hàng!');
+                      setGameSettings(prev => ({
+                        ...prev,
+                        crossword: {
+                          ...prev.crossword,
+                          config: {
+                            entries: [...entries, { answer: '', hint: '' }],
+                            secretWord: prev.crossword.config?.secretWord || '',
+                            questionCount: prev.crossword.config?.questionCount || entries.length + 1
+                          }
+                        }
+                      }));
+                    }}
+                    className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-200 flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Thêm hàng
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {(gameSettings.crossword.config?.entries || []).map((entry, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl">
+                      <span className="text-sm font-bold text-gray-400 w-6 text-center">{idx + 1}</span>
+                      <input 
+                        type="text" maxLength={9}
+                        placeholder="Đáp án (max 9 chữ)"
+                        className="flex-1 p-2 border rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                        value={entry.answer}
+                        onChange={e => {
+                          const val = e.target.value.toUpperCase().replace(/[^A-ZÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴĐ]/gi, '');
+                          setGameSettings(prev => {
+                            const entries = [...(prev.crossword.config?.entries || [])];
+                            entries[idx] = { ...entries[idx], answer: val.slice(0, 9) };
+                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                          });
+                        }}
+                      />
+                      <input 
+                        type="text"
+                        placeholder="Gợi ý (tùy chọn)"
+                        className="w-40 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                        value={entry.hint || ''}
+                        onChange={e => {
+                          setGameSettings(prev => {
+                            const entries = [...(prev.crossword.config?.entries || [])];
+                            entries[idx] = { ...entries[idx], hint: e.target.value };
+                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                          });
+                        }}
+                      />
+                      <button 
+                        onClick={() => {
+                          setGameSettings(prev => {
+                            const entries = [...(prev.crossword.config?.entries || [])];
+                            entries.splice(idx, 1);
+                            return { ...prev, crossword: { ...prev.crossword, config: { ...prev.crossword.config!, entries, secretWord: prev.crossword.config?.secretWord || '', questionCount: prev.crossword.config?.questionCount || entries.length } } };
+                          });
+                        }}
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {(gameSettings.crossword.config?.entries || []).length === 0 && (
+                    <div className="text-center text-gray-400 py-8 text-sm">Chưa có hàng nào. Nhấn "Thêm hàng" để bắt đầu.<br/>Nếu để trống, game sẽ tự lấy đáp án từ câu hỏi.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Secret Word + Preview */}
+              <div className="space-y-4">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-2">🔑 Chữ bí mật (dãy dọc ô vàng)</label>
+                  <input 
+                    type="text" maxLength={12}
+                    placeholder="VD: TOANHOC"
+                    className="w-full p-3 border-2 border-amber-300 rounded-xl font-mono text-2xl uppercase tracking-[0.5em] text-center text-amber-700 bg-amber-50 focus:ring-2 focus:ring-amber-400 focus:border-amber-500"
+                    value={gameSettings.crossword.config?.secretWord || ''}
+                    onChange={e => {
+                      const val = e.target.value.toUpperCase();
+                      setGameSettings(prev => ({
+                        ...prev,
+                        crossword: {
+                          ...prev.crossword,
+                          config: {
+                            entries: prev.crossword.config?.entries || [],
+                            secretWord: val,
+                            questionCount: prev.crossword.config?.questionCount || 0
+                          }
+                        }
+                      }));
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-gray-700 block mb-2">📝 Số câu hỏi</label>
+                  <input 
+                    type="number" min={1} max={20}
+                    className="w-full p-3 border-2 rounded-xl text-lg font-bold focus:ring-2 focus:ring-amber-300"
+                    value={gameSettings.crossword.config?.questionCount || 0}
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      setGameSettings(prev => ({
+                        ...prev,
+                        crossword: {
+                          ...prev.crossword,
+                          config: {
+                            entries: prev.crossword.config?.entries || [],
+                            secretWord: prev.crossword.config?.secretWord || '',
+                            questionCount: val
+                          }
+                        }
+                      }));
+                    }}
+                  />
+                </div>
+
+                {/* Mini Preview */}
+                {(gameSettings.crossword.config?.entries || []).length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-xl border">
+                    <h4 className="font-bold text-sm text-gray-600 mb-3">Xem trước ô chữ:</h4>
+                    <div className="space-y-1 font-mono text-xs">
+                      {(gameSettings.crossword.config?.entries || []).map((entry, idx) => {
+                        const secretIdx = gameSettings.crossword.config?.secretWord ? 
+                          entry.answer.indexOf(gameSettings.crossword.config.secretWord[idx]?.toUpperCase()) : -1;
+                        return (
+                          <div key={idx} className="flex gap-0.5 justify-center">
+                            {entry.answer.split('').map((char, ci) => (
+                              <div key={ci} className={`w-6 h-6 flex items-center justify-center border text-xs font-bold rounded
+                                ${ci === secretIdx ? 'bg-yellow-300 border-yellow-500 text-yellow-900' : 'bg-white border-gray-300 text-gray-700'}`}>
+                                {char}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

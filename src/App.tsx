@@ -391,7 +391,7 @@ export default function App() {
             {screen === 'flipcard' && <FlipCard questions={gameQuestions} onReplay={() => { setSelectedGame('flipcard'); setScreen('home'); }} />}
             {screen === 'goldenbell' && <GoldenBell questions={gameQuestions} onReplay={() => { setSelectedGame('goldenbell'); setScreen('home'); }} />}
             {screen === 'flower' && <Flower questions={gameQuestions} onReplay={() => { setSelectedGame('flower'); setScreen('home'); }} />}
-            {screen === 'crossword' && <Crossword questions={gameQuestions} onReplay={() => { setSelectedGame('crossword'); setScreen('home'); }} />}
+            {screen === 'crossword' && <Crossword questions={gameQuestions} crosswordConfig={data.gameSettings?.crossword?.config} onReplay={() => { setSelectedGame('crossword'); setScreen('home'); }} />}
           </div>
         </div>
       )}

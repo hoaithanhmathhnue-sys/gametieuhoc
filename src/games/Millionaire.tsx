@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Question } from '../types';
 import { Users, SkipForward, MessageCircle, BarChart3, X } from 'lucide-react';
 import { playDing, playBuzz, playTick } from '../utils/audio';
+import { MathContent } from '../MathContent';
 
 export default function Millionaire({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
   const [current, setCurrent] = useState(0);
@@ -112,22 +113,7 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
 
   const timerColor = timeLeft > 10 ? 'text-green-400' : timeLeft > 5 ? 'text-yellow-400' : 'text-red-500 animate-pulse';
 
-  // Render question text with MathJax and images
-  const renderContent = (text: string) => {
-    if (!text) return null;
-    // Check if text contains LaTeX patterns
-    const hasLatex = text.includes('\\(') || text.includes('\\[') || text.includes('$');
-    if (hasLatex) {
-      return <span dangerouslySetInnerHTML={{ __html: text }} />;
-    }
-    return <span>{text}</span>;
-  };
 
-  // Render image if present
-  const renderImage = (image: string | null | undefined) => {
-    if (!image) return null;
-    return <img src={image} className="max-h-48 object-contain rounded-xl mx-auto my-4" alt="Hình minh họa" />;
-  };
 
   if (status === 'end' || !q) {
     return (
@@ -241,11 +227,11 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
       )}
 
       {/* Question Image */}
-      {renderImage(q.image)}
+      {q.image && <img src={q.image} className="max-h-48 object-contain rounded-xl mx-auto my-4" alt="Hình minh họa" />}
       
       {/* Question Text */}
       <div className="w-full max-w-4xl bg-blue-800/80 border-2 border-blue-400 p-6 md:p-8 rounded-full text-center text-lg md:text-2xl font-bold mb-8 shadow-[0_0_15px_rgba(59,130,246,0.5)] backdrop-blur">
-        {renderContent(q.text)}
+        <MathContent html={q.text} />
       </div>
 
       {/* Answer Options */}
@@ -262,7 +248,7 @@ export default function Millionaire({ questions, onReplay }: { questions: Questi
                 status === 'wrong' ? 'bg-red-500/60 border-red-400/60' : 
                 'bg-blue-800/70 border-blue-400/60 hover:bg-blue-700 hover:border-blue-300 hover:scale-[1.02]'}`}
           >
-            <span className="text-yellow-400 mr-3 md:mr-4">{['A', 'B', 'C', 'D'][i]}:</span> {renderContent(opt)}
+            <span className="text-yellow-400 mr-3 md:mr-4">{['A', 'B', 'C', 'D'][i]}:</span> <MathContent html={opt} />
           </button>
         ))}
       </div>

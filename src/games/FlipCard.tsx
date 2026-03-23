@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Question } from '../types';
 import { playFlip, playDing, playBuzz } from '../utils/audio';
+import { MathContent } from '../MathContent';
 
 // Rainbow gradient colors for cards
 const CARD_COLORS = [
@@ -79,15 +80,7 @@ export default function FlipCard({ questions, onReplay }: { questions: Question[
     setActiveCard(null);
   };
 
-  // Render content with MathJax support
-  const renderContent = (text: string) => {
-    if (!text) return null;
-    const hasLatex = text.includes('\\(') || text.includes('\\[') || text.includes('$');
-    if (hasLatex) {
-      return <span dangerouslySetInnerHTML={{ __html: text }} />;
-    }
-    return <span>{text}</span>;
-  };
+
 
   const isGameOver = cards.every(c => c.solved);
 
@@ -200,7 +193,7 @@ export default function FlipCard({ questions, onReplay }: { questions: Question[
             ✨ Thẻ số {activeCard + 1}
           </div>
           {cards[activeCard].q.image && <img src={cards[activeCard].q.image} className="max-h-48 object-contain mx-auto mb-6 rounded-xl" alt="Hình minh họa" />}
-          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 leading-relaxed">{renderContent(cards[activeCard].q.text)}</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 leading-relaxed"><MathContent html={cards[activeCard].q.text} /></h2>
           <div className="grid grid-cols-2 gap-4 md:gap-6">
             {cards[activeCard].q.options.map((opt, i) => {
               const optColors = [
@@ -224,7 +217,7 @@ export default function FlipCard({ questions, onReplay }: { questions: Question[
                   <span className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center ${optBadgeColors[i]} rounded-full font-black text-xl md:text-2xl flex-shrink-0`}>
                     {['A', 'B', 'C', 'D'][i]}
                   </span>
-                  <span className="flex-1 text-gray-700">{renderContent(opt)}</span>
+                  <span className="flex-1 text-gray-700"><MathContent html={opt} /></span>
                 </button>
               );
             })}

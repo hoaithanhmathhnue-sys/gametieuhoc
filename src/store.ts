@@ -1,4 +1,4 @@
-import { AppData } from './types';
+import { AppData, DEFAULT_GAME_SETTINGS } from './types';
 
 const DATA_KEY = 'goc_game_data';
 
@@ -16,6 +16,7 @@ const defaultData: AppData = {
   questions: [],
   classrooms: [],
   selectedQuestionIds: [],
+  gameSettings: { ...DEFAULT_GAME_SETTINGS },
   settings: { lastUpdated: Date.now(), version: '1.0' }
 };
 
@@ -39,6 +40,7 @@ for (let i = 0; i < 15; i++) {
 const migrateData = (data: any): AppData => {
   if (!data.classrooms) data.classrooms = [];
   if (!data.selectedQuestionIds) data.selectedQuestionIds = [];
+  if (!data.gameSettings) data.gameSettings = { ...DEFAULT_GAME_SETTINGS };
   return data as AppData;
 };
 

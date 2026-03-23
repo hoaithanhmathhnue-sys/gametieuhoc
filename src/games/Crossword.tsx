@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Question } from '../types';
+import { Question, CrosswordConfig } from '../types';
 import { playDing, playBuzz, playBell, playTick } from '../utils/audio';
 import { Bell, Lightbulb, Clock, Sparkles, Star } from 'lucide-react';
+import { MathContent } from '../MathContent';
 
 const ROW_COLORS = [
   { bg: 'from-rose-500 to-pink-600', light: 'bg-rose-50', border: 'border-rose-300', text: 'text-rose-700', badge: 'bg-rose-500' },
@@ -14,24 +15,41 @@ const ROW_COLORS = [
   { bg: 'from-fuchsia-500 to-pink-600', light: 'bg-fuchsia-50', border: 'border-fuchsia-300', text: 'text-fuchsia-700', badge: 'bg-fuchsia-500' },
 ];
 
-export default function Crossword({ questions, onReplay }: { questions: Question[], onReplay?: () => void }) {
+export default function Crossword({ questions, crosswordConfig, onReplay }: { questions: Question[], crosswordConfig?: CrosswordConfig, onReplay?: () => void }) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
 
   const [grid, setGrid] = useState(() => {
-    const selectedQs = questions.slice(0, 8);
-    let maxLen = 0;
-    const words = selectedQs.map(q => {
-      const word = q.options[q.answer].replace(/\s/g, '').toUpperCase();
-      if (word.length > maxLen) maxLen = word.length;
-      return {
-        hint: q.text,
-        word: word,
+    // If teacher has pre-configured entries, use those
+    const hasConfig = crosswordConfig && crosswordConfig.entries && crosswordConfig.entries.length > 0 && crosswordConfig.entries.some(e => e.answer.length > 0);
+    
+    let words: { hint: string; word: string; solved: boolean; revealedChars: number[] }[];
+    
+    if (hasConfig) {
+      const numQ = crosswordConfig!.questionCount || crosswordConfig!.entries.length;
+      const entries = crosswordConfig!.entries.slice(0, numQ);
+      words = entries.map((entry, i) => ({
+        hint: entry.hint || (questions[i]?.text || `Hàng ${i + 1}`),
+        word: entry.answer.replace(/\s/g, '').toUpperCase().slice(0, 9),
         solved: false,
         revealedChars: [] as number[]
-      };
-    });
+      }));
+    } else {
+      const selectedQs = questions.slice(0, crosswordConfig?.questionCount || 8);
+      words = selectedQs.map(q => {
+        const word = q.options[q.answer].replace(/\s/g, '').toUpperCase().slice(0, 9); // Max 9 chars
+        return {
+          hint: q.text,
+          word: word,
+          solved: false,
+          revealedChars: [] as number[]
+        };
+      });
+    }
+
+    let maxLen = 0;
+    words.forEach(w => { if (w.word.length > maxLen) maxLen = w.word.length; });
     
     const alignedWords = words.map(w => {
       const midIdx = Math.floor(w.word.length / 2);
@@ -124,15 +142,7 @@ export default function Crossword({ questions, onReplay }: { questions: Question
     }
   };
 
-  // Render content with MathJax support
-  const renderContent = (text: string) => {
-    if (!text) return null;
-    const hasLatex = text.includes('\\(') || text.includes('\\[') || text.includes('$');
-    if (hasLatex) {
-      return <span dangerouslySetInnerHTML={{ __html: text }} />;
-    }
-    return <span>{text}</span>;
-  };
+
 
   const isGameOver = grid.every(w => w.solved);
   const solvedCount = grid.filter(w => w.solved).length;
@@ -300,7 +310,7 @@ export default function Crossword({ questions, onReplay }: { questions: Question
                     ${w.solved ? 'bg-gray-200 text-gray-500' : activeW === i ? `${color.badge} text-white` : 'bg-indigo-100 text-indigo-600'}`}>
                     {i+1}
                   </span> 
-                  {renderContent(w.hint)}
+                  <MathContent html={w.hint} />
                 </button>
               );
             })}

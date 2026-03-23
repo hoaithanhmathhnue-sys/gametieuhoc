@@ -13,18 +13,6 @@
         },
         options: {
           skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-        },
-        startup: {
-          ready: () => {
-            MathJax.startup.defaultReady();
-            // Re-typeset when DOM changes
-            const observer = new MutationObserver(() => {
-              if (MathJax.typesetPromise) {
-                MathJax.typesetPromise().catch(() => {});
-              }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-          }
         }
       };
     </script>
