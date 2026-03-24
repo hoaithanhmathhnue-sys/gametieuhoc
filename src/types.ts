@@ -43,6 +43,7 @@ export type GameSettings = {
   goldenBell: GameTimeConfig;
   crossword: GameTimeConfig & { config?: CrosswordConfig };
   flower: GameTimeConfig;
+  teamCount: number; // 2-4 đội
 };
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   millionaire: { timePerQuestion: 30 },
@@ -51,7 +52,21 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   goldenBell: { timePerQuestion: 0 },
   crossword: { timePerQuestion: 15 },
   flower: { timePerQuestion: 0 },
+  teamCount: 2,
 };
+
+export type TeamConfig = {
+  id: number;
+  name: string;
+  color: string;
+};
+
+export const DEFAULT_TEAM_CONFIGS: TeamConfig[] = [
+  { id: 1, name: 'Đội 1', color: '#3B82F6' },  // Blue
+  { id: 2, name: 'Đội 2', color: '#EF4444' },  // Red
+  { id: 3, name: 'Đội 3', color: '#10B981' },  // Green
+  { id: 4, name: 'Đội 4', color: '#F59E0B' },  // Amber
+];
 export type LeaderboardEntry = {
   id: string;
   studentId: string;
