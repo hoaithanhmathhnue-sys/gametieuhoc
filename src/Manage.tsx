@@ -686,7 +686,7 @@ ${rawText.substring(0, 30000)}`;
       )}
 
       {tab === 'import' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
             <h2 className="font-bold text-xl mb-4 text-blue-600">Nhập từ Word / PDF</h2>
             <p className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-3 rounded-lg">Định dạng mẫu:<br/>Câu 1: [Nội dung]<br/>A. [Lựa chọn]<br/>...<br/>Đáp án: A<br/>Độ khó: Dễ<br/>---</p>
@@ -700,13 +700,17 @@ ${rawText.substring(0, 30000)}`;
                 <input type="file" accept=".pdf" className="hidden" onChange={handleImportPdf} />
               </label>
             </div>
-            {/* Nút Phân tích file bằng AI */}
-            <div className="border-t border-dashed border-gray-200 pt-3 mt-1">
-              <p className="text-xs text-gray-400 mb-2 text-center">Sử dụng AI để phân tích & chọn câu hỏi</p>
+          </div>
+
+          {/* Cột riêng: Phân tích file bằng AI */}
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-2xl shadow-sm text-center border-2 border-purple-200">
+            <h2 className="font-bold text-xl mb-4 text-purple-700 flex items-center justify-center gap-2"><Bot size={22} /> Tải lên file (AI)</h2>
+            <p className="text-sm text-gray-500 mb-6">Sử dụng AI để phân tích & tự động chọn câu hỏi từ file Word hoặc PDF.</p>
+            <div className="space-y-3">
               <button 
                 onClick={() => handleAiAnalyzeFile('docx')} 
                 disabled={aiFileLoading}
-                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 transition-all shadow-lg shadow-purple-200 mb-2"
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 transition-all shadow-lg shadow-purple-200"
               >
                 {aiFileLoading ? <><Loader2 size={18} className="animate-spin" /> Đang phân tích...</> : <><Bot size={18} /> Phân tích file .docx (AI)</>}
               </button>
