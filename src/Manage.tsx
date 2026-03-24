@@ -203,7 +203,11 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
   const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-2.5-flash-lite'];
 
   const handleAiAnalyzeFile = async (fileType: 'docx' | 'pdf') => {
-    if (!apiKey) { setShowApiKeyModal(true); return; }
+    if (!apiKey) { 
+      alert('⚠️ Vui lòng nhập API Key trước khi sử dụng tính năng AI.\n\n👉 Lấy API key tại: https://aistudio.google.com/api-keys');
+      setShowApiKeyModal(true); 
+      return; 
+    }
     
     const input = document.createElement('input');
     input.type = 'file';
@@ -214,52 +218,74 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
       
       setAiFileLoading(true);
       try {
-        // Step 1: Parse file using existing parsers to extract raw text + images + math
+        // Step 1: Trích xuất raw text thuần từ file (KHÔNG parse format)
         let rawText = '';
-        let imageMap = new Map<string, string>();
         
         if (fileType === 'docx') {
+          // Luôn dùng mammoth để lấy raw text - đáng tin cậy nhất
           try {
-            const buffer = await file.arrayBuffer();
-            // Use parseDocx to extract structured text with math (LaTeX)
-            const parsed = await parseDocx(file);
-            // Build raw text for AI analysis
-            rawText = parsed.map((q, i) => {
-              let block = `Câu ${i+1}: ${q.text}\n`;
-              q.options.forEach((opt, j) => {
-                block += `${String.fromCharCode(65 + j)}. ${opt}\n`;
-              });
-              block += `Đáp án: ${String.fromCharCode(65 + q.answer)}\nĐộ khó: ${q.difficulty === 'easy' ? 'Dễ' : q.difficulty === 'hard' ? 'Khó' : q.difficulty === 'super_hard' ? 'Siêu khó' : 'Trung bình'}\n---`;
-              return block;
-            }).join('\n');
-            
-            // For better AI analysis, also get raw text from mammoth
-            if (parsed.length > 0) {
-              const mammoth = await import('mammoth');
-              const result = await mammoth.default.extractRawText({ arrayBuffer: buffer });
-              if (result.value.trim()) rawText = result.value;
-            }
-          } catch (err) {
-            console.warn('[AI Analyze] DOCX parse failed, trying mammoth fallback');
             const mammoth = await import('mammoth');
             const buffer = await file.arrayBuffer();
-            const result = await mammoth.default.extractRawText({ arrayBuffer: buffer });
-            rawText = result.value;
+            // Thử lấy HTML trước (giữ được format, bold, etc.)
+            const htmlResult = await mammoth.default.convertToHtml({ arrayBuffer: buffer });
+            if (htmlResult.value.trim()) {
+              // Chuyển HTML sang text nhưng giữ cấu trúc
+              rawText = htmlResult.value
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<\/div>/gi, '\n')
+                .replace(/<\/li>/gi, '\n')
+                .replace(/<\/tr>/gi, '\n')
+                .replace(/<[^>]*>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            }
+            // Fallback: nếu HTML rỗng thì thử raw text
+            if (!rawText.trim()) {
+              const textResult = await mammoth.default.extractRawText({ arrayBuffer: buffer });
+              rawText = textResult.value.trim();
+            }
+          } catch (err) {
+            console.error('[AI Analyze] mammoth failed:', err);
+            alert('Không thể đọc file .docx. Hãy kiểm tra file có bị hỏng không.');
+            setAiFileLoading(false);
+            return;
           }
         } else {
-          // PDF
+          // PDF - dùng pdfjs-dist trực tiếp lấy raw text
           try {
-            const parsed = await parsePdf(file);
-            rawText = parsed.map((q, i) => {
-              let block = `Câu ${i+1}: ${q.text}\n`;
-              q.options.forEach((opt, j) => {
-                block += `${String.fromCharCode(65 + j)}. ${opt}\n`;
-              });
-              block += `Đáp án: ${String.fromCharCode(65 + q.answer)}\nĐộ khó: ${q.difficulty === 'easy' ? 'Dễ' : q.difficulty === 'hard' ? 'Khó' : q.difficulty === 'super_hard' ? 'Siêu khó' : 'Trung bình'}\n---`;
-              return block;
-            }).join('\n');
-          } catch {
-            alert('Không thể đọc file PDF.');
+            const pdfjsLib = await import('pdfjs-dist');
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+            
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              let lastY: number | null = null;
+              let pageText = '';
+              for (const item of textContent.items) {
+                const textItem = item as any;
+                if (textItem.str !== undefined) {
+                  if (lastY !== null && Math.abs(textItem.transform[5] - lastY) > 5) {
+                    pageText += '\n';
+                  }
+                  pageText += textItem.str;
+                  lastY = textItem.transform[5];
+                }
+              }
+              fullText += pageText + '\n\n';
+            }
+            rawText = fullText.trim();
+          } catch (err) {
+            console.error('[AI Analyze] pdfjs failed:', err);
+            alert('Không thể đọc file PDF. Hãy kiểm tra file có bị hỏng hoặc mã hóa không.');
             setAiFileLoading(false);
             return;
           }
