@@ -31,8 +31,15 @@ export default function Obstacle({ questions, onReplay, onGameEnd }: { questions
   const [selectedOpt, setSelectedOpt] = useState(-1);
 
   const q = questions[currentQ];
-  const totalSteps = 20;
-  const obstacles: Record<number, string> = { 4: '🌵', 8: '🗻', 12: '🌊', 16: '🔥' };
+  const totalSteps = questions.length;
+  // Dynamic obstacles at ~25%, 50%, 75% of track
+  const obstaclePositions: Record<number, string> = {};
+  const emojis = ['🌵', '🗻', '🌊', '🔥'];
+  [0.25, 0.5, 0.75, 0.9].forEach((pct, i) => {
+    const pos = Math.round(totalSteps * pct);
+    if (pos > 0 && pos < totalSteps) obstaclePositions[pos] = emojis[i];
+  });
+  const obstacles = obstaclePositions;
 
   const handleAnswer = (idx: number) => {
     if (status !== 'playing') return;
