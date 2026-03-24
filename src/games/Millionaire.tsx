@@ -16,7 +16,11 @@ export default function Millionaire({ questions, onReplay, onGameEnd }: { questi
   const [history, setHistory] = useState<number[]>([]);
 
   const q = questions[current];
-  const levels = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000];
+  // Generate levels dynamically based on number of questions
+  const levels = Array.from({ length: questions.length }, (_, i) => {
+    const base = [100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000];
+    return i < base.length ? base[i] : base[base.length - 1] + (i - base.length + 1) * 50000;
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('millionaire_history');
@@ -61,7 +65,7 @@ export default function Millionaire({ questions, onReplay, onGameEnd }: { questi
       const newScore = levels[current] || 0;
       setScore(newScore);
       setTimeout(() => {
-        if (current + 1 < questions.length && current + 1 < 12) {
+        if (current + 1 < questions.length) {
           setCurrent(p => p + 1);
           setTimeLeft(30);
           setHiddenOpts([]);
@@ -154,7 +158,7 @@ export default function Millionaire({ questions, onReplay, onGameEnd }: { questi
       {/* Top Bar: Question number + Timer */}
       <div className="w-full max-w-4xl flex justify-between items-center mb-4">
         <div className="text-xl font-bold text-white/90 bg-white/10 px-4 py-2 rounded-full">
-          Câu {current + 1} / 12
+          Câu {current + 1} / {questions.length}
         </div>
         <div className={`text-4xl font-bold ${timerColor} bg-white/10 px-5 py-2 rounded-full`}>
           {timeLeft}s
