@@ -9,7 +9,7 @@ import FlipCard from './games/FlipCard';
 import GoldenBell from './games/GoldenBell';
 import Flower from './games/Flower';
 import Crossword from './games/Crossword';
-import { Settings, Play, ArrowLeft, Trophy, Award, HelpCircle, Home, Star, Medal, BookOpen, Gamepad2, Sparkles, Crown, Users } from 'lucide-react';
+import { Settings, Play, ArrowLeft, Trophy, Award, HelpCircle, Home, Star, Medal, BookOpen, Gamepad2, Sparkles, Crown, Users, Key, X } from 'lucide-react';
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
@@ -19,6 +19,9 @@ export default function App() {
   const [activeNav, setActiveNav] = useState('home');
   const [currentPlayer, setCurrentPlayer] = useState<SelectedPlayer>(null);
   const [currentGameId, setCurrentGameId] = useState<string>('');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  const [apiKeyInput, setApiKeyInput] = useState('');
 
   useEffect(() => {
     setData(loadData());
@@ -335,6 +338,16 @@ export default function App() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {/* Nút API Key - luôn hiển thị trên Header theo LỆNH.md */}
+          <button
+            onClick={() => { setApiKeyInput(apiKey); setShowApiKeyModal(true); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-sm border transition-all text-xs font-bold
+              ${apiKey ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 animate-pulse'}`}
+          >
+            <Key size={14} />
+            <span className="hidden sm:inline">{apiKey ? 'API Key ✓' : 'Nhập API Key'}</span>
+          </button>
+          {!apiKey && <span className="text-red-500 text-xs font-bold hidden md:block animate-pulse">Lấy API key để sử dụng app</span>}
           <button
             onClick={() => setScreen('manage')}
             className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 hover:scale-105 transition-transform text-sm font-bold text-gray-700 hover:text-teal-700"
@@ -552,6 +565,65 @@ export default function App() {
             {screen === 'goldenbell' && <GoldenBell questions={gameQuestions} onReplay={() => { setSelectedGame('goldenbell'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
             {screen === 'flower' && <Flower questions={gameQuestions} onReplay={() => { setSelectedGame('flower'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
             {screen === 'crossword' && <Crossword questions={gameQuestions} crosswordConfig={data.gameSettings?.crossword?.config} onReplay={() => { setSelectedGame('crossword'); setScreen('home'); }} onGameEnd={(s, c, t) => recordScore(s, c, t)} />}
+          </div>
+        </div>
+      )}
+      {/* Modal nhập API Key */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4" onClick={() => apiKey && setShowApiKeyModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => apiKey && setShowApiKeyModal(false)} className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100">
+              <X size={20} className="text-gray-400" />
+            </button>
+            <div className="text-center mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Key size={28} className="text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Thiết lập API Key</h3>
+              <p className="text-sm text-gray-500 mt-1">Nhập Gemini API Key để sử dụng các tính năng AI</p>
+            </div>
+            <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer"
+              className="block text-center text-sm text-blue-600 hover:text-blue-800 underline mb-4 font-medium">
+              👉 Lấy API Key tại aistudio.google.com/api-keys
+            </a>
+            <input
+              type="password"
+              placeholder="Dán API Key vào đây..."
+              value={apiKeyInput}
+              onChange={e => setApiKeyInput(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none text-sm"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => {
+                  if (apiKeyInput.trim()) {
+                    localStorage.setItem('gemini_api_key', apiKeyInput.trim());
+                    setApiKey(apiKeyInput.trim());
+                    setShowApiKeyModal(false);
+                  }
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-blue-500 text-white font-bold rounded-xl hover:opacity-90 transition"
+              >
+                💾 Lưu Key
+              </button>
+              {apiKey && (
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('gemini_api_key');
+                    setApiKey('');
+                    setApiKeyInput('');
+                  }}
+                  className="px-4 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 border border-red-200 transition"
+                >
+                  🗑️ Xóa
+                </button>
+              )}
+            </div>
+            {!apiKey && (
+              <p className="text-center text-xs text-red-500 mt-3 font-medium animate-pulse">
+                ⚠️ Bạn cần nhập API Key để sử dụng tính năng phân tích file AI
+              </p>
+            )}
           </div>
         </div>
       )}
