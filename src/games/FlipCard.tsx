@@ -26,7 +26,7 @@ export default function FlipCard({ questions, onReplay, onGameEnd }: { questions
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
 
-  const [cards, setCards] = useState(questions.slice(0, 12).map((q, i) => ({ id: i, q, flipped: false, solved: false })));
+  const [cards, setCards] = useState(questions.map((q, i) => ({ id: i, q, flipped: false, solved: false })));
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const [score, setScore] = useState([0, 0]);
   const [turn, setTurn] = useState(0);
