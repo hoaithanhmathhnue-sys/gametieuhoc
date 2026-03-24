@@ -21,17 +21,30 @@ export default function Obstacle({ questions, onReplay, onGameEnd }: { questions
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
 
+  // Tách câu hỏi thành 2 pool riêng biệt cho 2 đội (không trùng nhau)
+  const [teamPools] = useState(() => {
+    const pool1: Question[] = [];
+    const pool2: Question[] = [];
+    questions.forEach((q, i) => {
+      if (i % 2 === 0) pool1.push(q);
+      else pool2.push(q);
+    });
+    return [pool1, pool2];
+  });
+
+  const totalSteps = Math.min(teamPools[0].length, teamPools[1].length);
+
   const [teams, setTeams] = useState([
     { id: 1, pos: 0, icon: '🐱', isBouncing: false, isShaking: false },
     { id: 2, pos: 0, icon: '🐶', isBouncing: false, isShaking: false }
   ]);
   const [turn, setTurn] = useState(0);
-  const [currentQ, setCurrentQ] = useState(0);
+  const [teamQIndex, setTeamQIndex] = useState([0, 0]); // con trỏ câu hỏi riêng mỗi đội
   const [status, setStatus] = useState<'playing'|'answered'|'end'>('playing');
   const [selectedOpt, setSelectedOpt] = useState(-1);
 
-  const q = questions[currentQ];
-  const totalSteps = questions.length;
+  const q = teamPools[turn][teamQIndex[turn]];
+
   // Dynamic obstacles at ~25%, 50%, 75% of track
   const obstaclePositions: Record<number, string> = {};
   const emojis = ['🌵', '🗻', '🌊', '🔥'];
@@ -42,7 +55,7 @@ export default function Obstacle({ questions, onReplay, onGameEnd }: { questions
   const obstacles = obstaclePositions;
 
   const handleAnswer = (idx: number) => {
-    if (status !== 'playing') return;
+    if (status !== 'playing' || !q) return;
     setSelectedOpt(idx);
     setStatus('answered');
     
@@ -67,21 +80,26 @@ export default function Obstacle({ questions, onReplay, onGameEnd }: { questions
         
         if (newPos >= totalSteps) {
           setStatus('end');
-          const correctAnswered = Math.ceil(totalSteps / 2);
-          onGameEnd?.(correctAnswered * 10, correctAnswered, questions.length);
+          onGameEnd?.(newPos * 10, newPos, questions.length);
         } else {
-          nextTurn();
+          advanceTurn();
         }
       }, 1000);
     } else {
       playBuzz();
-      setTimeout(() => nextTurn(), 2000);
+      setTimeout(() => advanceTurn(), 2000);
     }
   };
 
-  const nextTurn = () => {
+  const advanceTurn = () => {
+    const currentTeam = turn;
+    // Tăng con trỏ câu hỏi của đội hiện tại
+    setTeamQIndex(prev => {
+      const next = [...prev];
+      next[currentTeam] = (next[currentTeam] + 1) % teamPools[currentTeam].length;
+      return next;
+    });
     setTurn(p => (p + 1) % teams.length);
-    setCurrentQ(p => (p + 1) % questions.length);
     setStatus('playing');
     setSelectedOpt(-1);
   };
