@@ -8,7 +8,7 @@ export default function Flower({ questions, onReplay, onGameEnd }: { questions: 
     return <div className="p-8 text-center">Không có câu hỏi nào để chơi.</div>;
   }
 
-  const flowerCount = Math.min(questions.length, 12);
+  const flowerCount = questions.length;
   const [flowers, setFlowers] = useState(questions.slice(0, flowerCount).map((q, i) => ({ id: i, q, pickedBy: null as number | null })));
   const [activeF, setActiveF] = useState<number | null>(null);
   const [showResult, setShowResult] = useState<'correct' | 'wrong' | null>(null);
