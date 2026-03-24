@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppData, Question, Subject, Topic, Difficulty, GameSettings, CrosswordConfig, CrosswordEntry, DEFAULT_GAME_SETTINGS } from './types';
+import { AppData, Question, Subject, Topic, Difficulty, GameSettings, CrosswordConfig, CrosswordEntry, DEFAULT_GAME_SETTINGS, DEFAULT_TEAM_CONFIGS } from './types';
 import { saveData } from './store';
 import { parseDocx } from './docxParser';
 import { parsePdf } from './pdfParser';
 import { MathContent } from './MathContent';
 import ClassroomManage from './ClassroomManage';
 import { GoogleGenAI } from '@google/genai';
-import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School, Settings } from 'lucide-react';
+import { Trash2, Edit, Plus, Upload, Download, Image as ImageIcon, ArrowLeft, Save, Search, ChevronLeft, ChevronRight, Sparkles, CheckSquare, Square, Loader2, Key, Play, School, Settings, Bot, FileSearch, Check, X, Users } from 'lucide-react';
 
 export default function Manage({ data, onBack, onDataChange }: { data: AppData, onBack: () => void, onDataChange: (d: AppData) => void }) {
   const [tab, setTab] = useState<'questions'|'subjects'|'import'|'classrooms'|'settings'>('questions');
@@ -34,6 +34,12 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
   const [aiSubjId, setAiSubjId] = useState(subjects[0]?.id || '');
   const [aiTopicId, setAiTopicId] = useState('');
   
+  // AI File Analysis
+  const [aiFileLoading, setAiFileLoading] = useState(false);
+  const [aiFileParsedQuestions, setAiFileParsedQuestions] = useState<Array<{text: string; options: string[]; answer: number; difficulty: string; image: string | null}>>([]);
+  const [showAiFilePreview, setShowAiFilePreview] = useState(false);
+  const [aiFileRawText, setAiFileRawText] = useState('');
+
   // Subject/Topic Form
   const [editingSubj, setEditingSubj] = useState<Partial<Subject> | null>(null);
   const [editingTopic, setEditingTopic] = useState<{subjId: string, topic: Partial<Topic>} | null>(null);
@@ -193,6 +199,173 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
     }
   };
 
+  // AI File Analysis - Phân tích file bằng AI
+  const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-2.5-flash-lite'];
+
+  const handleAiAnalyzeFile = async (fileType: 'docx' | 'pdf') => {
+    if (!apiKey) { setShowApiKeyModal(true); return; }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = fileType === 'docx' ? '.docx' : '.pdf';
+    input.onchange = async (ev: any) => {
+      const file = ev.target?.files?.[0];
+      if (!file) return;
+      
+      setAiFileLoading(true);
+      try {
+        // Step 1: Parse file using existing parsers to extract raw text + images + math
+        let rawText = '';
+        let imageMap = new Map<string, string>();
+        
+        if (fileType === 'docx') {
+          try {
+            const buffer = await file.arrayBuffer();
+            // Use parseDocx to extract structured text with math (LaTeX)
+            const parsed = await parseDocx(file);
+            // Build raw text for AI analysis
+            rawText = parsed.map((q, i) => {
+              let block = `Câu ${i+1}: ${q.text}\n`;
+              q.options.forEach((opt, j) => {
+                block += `${String.fromCharCode(65 + j)}. ${opt}\n`;
+              });
+              block += `Đáp án: ${String.fromCharCode(65 + q.answer)}\nĐộ khó: ${q.difficulty === 'easy' ? 'Dễ' : q.difficulty === 'hard' ? 'Khó' : q.difficulty === 'super_hard' ? 'Siêu khó' : 'Trung bình'}\n---`;
+              return block;
+            }).join('\n');
+            
+            // For better AI analysis, also get raw text from mammoth
+            if (parsed.length > 0) {
+              const mammoth = await import('mammoth');
+              const result = await mammoth.default.extractRawText({ arrayBuffer: buffer });
+              if (result.value.trim()) rawText = result.value;
+            }
+          } catch (err) {
+            console.warn('[AI Analyze] DOCX parse failed, trying mammoth fallback');
+            const mammoth = await import('mammoth');
+            const buffer = await file.arrayBuffer();
+            const result = await mammoth.default.extractRawText({ arrayBuffer: buffer });
+            rawText = result.value;
+          }
+        } else {
+          // PDF
+          try {
+            const parsed = await parsePdf(file);
+            rawText = parsed.map((q, i) => {
+              let block = `Câu ${i+1}: ${q.text}\n`;
+              q.options.forEach((opt, j) => {
+                block += `${String.fromCharCode(65 + j)}. ${opt}\n`;
+              });
+              block += `Đáp án: ${String.fromCharCode(65 + q.answer)}\nĐộ khó: ${q.difficulty === 'easy' ? 'Dễ' : q.difficulty === 'hard' ? 'Khó' : q.difficulty === 'super_hard' ? 'Siêu khó' : 'Trung bình'}\n---`;
+              return block;
+            }).join('\n');
+          } catch {
+            alert('Không thể đọc file PDF.');
+            setAiFileLoading(false);
+            return;
+          }
+        }
+        
+        if (!rawText.trim()) {
+          alert('Không tìm thấy nội dung trong file.');
+          setAiFileLoading(false);
+          return;
+        }
+
+        setAiFileRawText(rawText);
+
+        // Step 2: Send to Gemini AI for analysis with fallback
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `Bạn là chuyên gia phân tích đề thi. Hãy phân tích nội dung văn bản dưới đây và trích xuất TẤT CẢ câu hỏi trắc nghiệm (4 đáp án A, B, C, D).
+
+QUY TẮC QUAN TRỌNG:
+- Giữ nguyên mọi công thức toán học ở dạng LaTeX inline \\(...\\)
+- Nếu câu hỏi có hình ảnh, ghi [IMG] vào vị trí hình
+- Xác định đáp án đúng (index 0-3 tương ứng A-D)
+- Phân loại độ khó: easy | medium | hard | super_hard
+- CHỈ trả về JSON array, KHÔNG thêm text nào khác
+
+Format JSON:
+[{
+  "text": "Nội dung câu hỏi (giữ LaTeX nếu có)",
+  "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
+  "answer": 0,
+  "difficulty": "medium"
+}]
+
+NỘI DUNG FILE:
+${rawText.substring(0, 30000)}`;
+
+        let lastError: any = null;
+        let aiResult: any[] | null = null;
+
+        for (const model of FALLBACK_MODELS) {
+          try {
+            console.log(`[AI Analyze] Trying model: ${model}`);
+            const response = await ai.models.generateContent({
+              model,
+              contents: prompt
+            });
+            let responseText = response.text || '';
+            responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            aiResult = JSON.parse(responseText);
+            if (Array.isArray(aiResult) && aiResult.length > 0) {
+              console.log(`[AI Analyze] Success with ${model}, found ${aiResult.length} questions`);
+              break;
+            }
+          } catch (err: any) {
+            lastError = err;
+            console.warn(`[AI Analyze] Model ${model} failed:`, err.message);
+          }
+        }
+
+        if (!aiResult || aiResult.length === 0) {
+          throw lastError || new Error('AI không tìm thấy câu hỏi nào trong file.');
+        }
+
+        const parsedQuestions = aiResult.map((q: any) => ({
+          text: q.text || '',
+          options: Array.isArray(q.options) ? q.options : ['', '', '', ''],
+          answer: typeof q.answer === 'number' ? q.answer : 0,
+          difficulty: ['easy', 'medium', 'hard', 'super_hard'].includes(q.difficulty) ? q.difficulty : 'medium',
+          image: null as string | null
+        }));
+
+        setAiFileParsedQuestions(parsedQuestions);
+        setShowAiFilePreview(true);
+      } catch (err: any) {
+        console.error('[AI Analyze] Error:', err);
+        if (err.message?.includes('API key') || err.status === 401) {
+          alert('API key không hợp lệ. Vui lòng kiểm tra lại.');
+          setShowApiKeyModal(true);
+        } else {
+          alert('Lỗi phân tích AI: ' + (err.message || 'Không xác định'));
+        }
+      } finally {
+        setAiFileLoading(false);
+      }
+    };
+    input.click();
+  };
+
+  const handleConfirmAiQuestions = () => {
+    if (aiFileParsedQuestions.length === 0) return;
+    const newQs: Question[] = aiFileParsedQuestions.map((p, i) => ({
+      id: `q_ai_file_${Date.now()}_${i}`,
+      subjectId: subjects[0]?.id || '',
+      topicId: subjects[0]?.topics[0]?.id || '',
+      text: p.text,
+      options: p.options,
+      answer: p.answer,
+      difficulty: p.difficulty as Difficulty,
+      image: p.image,
+      createdAt: Date.now()
+    }));
+    setQuestions(prev => [...newQs, ...prev]);
+    setShowAiFilePreview(false);
+    setAiFileParsedQuestions([]);
+    alert(`Đã thêm ${newQs.length} câu hỏi từ AI vào kho!`);
+  };
+
   const handleImportPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -316,6 +489,18 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
         <h1 className="text-2xl font-bold">Quản lý kho câu hỏi</h1>
         <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700"><Save size={20}/> Lưu thay đổi</button>
       </div>
+
+      {/* Banner nhắc API Key - theo LỆNH.md */}
+      {!apiKey && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between mb-4 animate-pulse">
+          <p className="text-red-600 font-bold text-sm flex items-center gap-2">
+            <Key size={16} /> Hãy lấy API KEY để sử dụng tính năng AI
+          </p>
+          <button onClick={() => setShowApiKeyModal(true)} className="bg-red-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-red-600 flex items-center gap-1.5 transition-colors">
+            <Key size={14} /> Nhập API Key
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-4 mb-6 flex-wrap">
         <button onClick={() => setTab('questions')} className={`px-4 py-2 rounded-xl font-bold ${tab==='questions'?'bg-blue-600 text-white':'bg-white'}`}>Câu hỏi ({questions.length})</button>
@@ -514,6 +699,24 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                 <Upload size={20}/> Chọn file .pdf
                 <input type="file" accept=".pdf" className="hidden" onChange={handleImportPdf} />
               </label>
+            </div>
+            {/* Nút Phân tích file bằng AI */}
+            <div className="border-t border-dashed border-gray-200 pt-3 mt-1">
+              <p className="text-xs text-gray-400 mb-2 text-center">Sử dụng AI để phân tích & chọn câu hỏi</p>
+              <button 
+                onClick={() => handleAiAnalyzeFile('docx')} 
+                disabled={aiFileLoading}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 transition-all shadow-lg shadow-purple-200 mb-2"
+              >
+                {aiFileLoading ? <><Loader2 size={18} className="animate-spin" /> Đang phân tích...</> : <><Bot size={18} /> Phân tích file .docx (AI)</>}
+              </button>
+              <button 
+                onClick={() => handleAiAnalyzeFile('pdf')} 
+                disabled={aiFileLoading}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-rose-600 hover:to-pink-600 disabled:opacity-50 transition-all shadow-lg shadow-rose-200"
+              >
+                {aiFileLoading ? <><Loader2 size={18} className="animate-spin" /> Đang phân tích...</> : <><Bot size={18} /> Phân tích file .pdf (AI)</>}
+              </button>
             </div>
           </div>
           
@@ -772,6 +975,34 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
               </div>
             </div>
           </div>
+
+          {/* Cài đặt số đội chơi */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-blue-200">
+            <h2 className="text-xl font-bold text-blue-800 flex items-center gap-2 mb-1">
+              <Users size={20} /> Cài đặt đội chơi
+            </h2>
+            <p className="text-sm text-blue-600 mb-4">Chọn số đội tham gia trò chơi (2-4 đội). Áp dụng cho tất cả các game.</p>
+            <div className="flex gap-3">
+              {[2, 3, 4].map(n => (
+                <button key={n} onClick={() => setGameSettings(prev => ({...prev, teamCount: n}))}
+                  className={`flex-1 py-4 rounded-xl font-bold text-lg border-2 transition-all
+                    ${(gameSettings.teamCount || 2) === n 
+                      ? 'bg-blue-100 border-blue-500 text-blue-700 shadow-md scale-105'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'}`}>
+                  {n} đội
+                </button>
+              ))}
+            </div>
+            {/* Preview đội chơi với màu sắc */}
+            <div className="flex gap-2 mt-4">
+              {DEFAULT_TEAM_CONFIGS.slice(0, gameSettings.teamCount || 2).map(team => (
+                <div key={team.id} className="flex-1 p-3 rounded-xl text-center text-white font-bold text-sm shadow-md transition-all"
+                  style={{ backgroundColor: team.color }}>
+                  {team.name}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -812,6 +1043,49 @@ export default function Manage({ data, onBack, onDataChange }: { data: AppData, 
                 <button onClick={() => setShowAiModal(false)} className="px-6 py-3 bg-gray-200 font-bold rounded-xl">Hủy</button>
               </div>
               <button onClick={() => setShowApiKeyModal(true)} className="w-full text-xs text-gray-400 hover:text-purple-600 flex items-center justify-center gap-1"><Key size={12} /> Đổi API Key</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI File Preview Modal */}
+      {showAiFilePreview && aiFileParsedQuestions.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Bot size={22} className="text-purple-600" /> Kết quả phân tích AI
+              </h2>
+              <button onClick={() => { setShowAiFilePreview(false); setAiFileParsedQuestions([]); }} className="p-2 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4 bg-purple-50 p-3 rounded-xl">
+              AI đã tìm thấy <span className="font-bold text-purple-700">{aiFileParsedQuestions.length}</span> câu hỏi. Vui lòng xem lại trước khi thêm vào kho.
+            </p>
+            <div className="space-y-3 mb-6">
+              {aiFileParsedQuestions.map((q, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-lg">Câu {i+1}</span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${q.difficulty === 'easy' ? 'bg-green-100 text-green-700' : q.difficulty === 'hard' ? 'bg-orange-100 text-orange-700' : q.difficulty === 'super_hard' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {q.difficulty === 'easy' ? 'Dễ' : q.difficulty === 'hard' ? 'Khó' : q.difficulty === 'super_hard' ? 'Siêu khó' : 'TB'}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-gray-800 mb-2"><MathContent html={q.text} /></p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {q.options.map((opt, j) => (
+                      <div key={j} className={`text-sm py-1.5 px-3 rounded-lg ${j === q.answer ? 'bg-green-100 text-green-800 font-bold border border-green-300' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                        <span className="font-bold mr-1">{String.fromCharCode(65 + j)}.</span> <MathContent html={opt} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3 sticky bottom-0 bg-white pt-3 border-t">
+              <button onClick={handleConfirmAiQuestions} className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold rounded-xl hover:from-purple-600 hover:to-indigo-600 flex items-center justify-center gap-2 shadow-lg">
+                <Check size={18} /> Thêm {aiFileParsedQuestions.length} câu vào kho
+              </button>
+              <button onClick={() => { setShowAiFilePreview(false); setAiFileParsedQuestions([]); }} className="px-6 py-3 bg-gray-200 font-bold rounded-xl">Hủy</button>
             </div>
           </div>
         </div>
